@@ -2,12 +2,126 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"microservices/internal/auth"
+	"microservices/pkg/apikey"
 	"microservices/pkg/bcryptutil"
 	"microservices/pkg/jsonutil"
 	"microservices/pkg/jwtutil"
 	"net/http"
+	"strings"
 )
+
+type GenerateAPIKeyRequest struct {
+	Environment string `json:"environment"` // "test" or "live"
+}
+
+type GenerateAPIKeyResponse struct {
+	Key          string `json:"key"` // Full key shown ONLY once
+	Environment  string `json:"environment"`
+	TruncatedKey string `json:"truncated_key"`
+}
+
+// Helper to extract UserID from JWT (duplicated from payments, common lib pending)
+func extractUserIDFromToken(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", nil
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := jwtutil.ValidateToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+	return claims.UserID, nil
+}
+
+func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
+	userID, err := extractUserIDFromToken(r)
+	if err != nil || userID == "" {
+		jsonutil.WriteErrorJSON(w, "Unauthorized")
+		return
+	}
+
+	var req GenerateAPIKeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.Environment != "test" && req.Environment != "live" {
+		jsonutil.WriteErrorJSON(w, "Invalid environment (use 'test' or 'live')")
+		return
+	}
+
+	prefix := "sk_" + req.Environment
+	fullKey, hash, err := apikey.GenerateKey(prefix)
+	if err != nil {
+		jsonutil.WriteErrorJSON(w, "Failed to generate key")
+		return
+	}
+
+	truncated := fullKey[len(fullKey)-4:]
+
+	apiKey := &auth.APIKey{
+		UserID:       userID,
+		KeyPrefix:    prefix,
+		KeyHash:      hash,
+		TruncatedKey: truncated,
+		Environment:  req.Environment,
+	}
+
+	if err := h.repo.CreateAPIKey(r.Context(), apiKey); err != nil {
+		jsonutil.WriteErrorJSON(w, "Failed to save API key")
+		return
+	}
+
+	// Return the FULL key only once
+	jsonutil.WriteJSON(w, http.StatusCreated, GenerateAPIKeyResponse{
+		Key:          fullKey,
+		Environment:  req.Environment,
+		TruncatedKey: truncated,
+	})
+}
+
+type ValidateAPIKeyRequest struct {
+	KeyHash string `json:"key_hash"`
+}
+
+type ValidateAPIKeyResponse struct {
+	Valid       bool   `json:"valid"`
+	UserID      string `json:"user_id"`
+	Environment string `json:"environment"`
+}
+
+func (h *AuthHandler) ValidateAPIKey(w http.ResponseWriter, r *http.Request) {
+	// Internal endpoint, should be protected (e.g. valid only from localhost or via mTLS/secret)
+	// For now, assuming network isolation or simple IP check in real world.
+
+	var req ValidateAPIKeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	key, err := h.repo.GetAPIKeyByHash(r.Context(), req.KeyHash)
+	if err != nil {
+		log.Printf("Error validating key: %v", err)
+		jsonutil.WriteErrorJSON(w, "Validation failed")
+		return
+	}
+
+	if key == nil || key.RevokedAt != nil {
+		jsonutil.WriteJSON(w, http.StatusOK, ValidateAPIKeyResponse{Valid: false})
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, ValidateAPIKeyResponse{
+		Valid:       true,
+		UserID:      key.UserID,
+		Environment: key.Environment,
+	})
+}
 
 // AuthHandler holds dependencies for authentication endpoints.
 type AuthHandler struct {

@@ -68,14 +68,19 @@ type ConfirmIntentRequest struct {
 	PaymentMethodID string `json:"payment_method_id"` // e.g., "tok_visa"
 }
 
-// extractUserIDFromToken is a helper to get UserID from JWT.
-// In a real microservice, the Gateway might pass this as a header (X-User-ID),
-// or we validate the token here. For this phase, let's validate the token here if present.
+// extractUserIDFromToken is a helper to get UserID.
+// It checks X-User-ID header (injected by Gateway) first.
 func extractUserIDFromToken(r *http.Request) (string, error) {
+	if userID := r.Header.Get("X-User-ID"); userID != "" {
+		return userID, nil
+	}
+
+	// Fallback if needed, or remove JWT logic entirely if we strictly enforce Gateway
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return "", nil // No auth
 	}
+	// ... logic mostly redundant now but kept as fallback if direct access needed
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 	claims, err := jwtutil.ValidateToken(tokenString)
 	if err != nil {

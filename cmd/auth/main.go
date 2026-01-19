@@ -57,6 +57,9 @@ func main() {
 
 	mux.HandleFunc("/register", handler.Register)
 	mux.HandleFunc("/login", handler.Login)
+	mux.HandleFunc("/api_keys", handler.GenerateAPIKey)
+	// Internal endpoint for Gateway Validation
+	mux.HandleFunc("/validate_key", handler.ValidateAPIKey)
 
 	log.Println("Auth service starting on :8081")
 	if err := http.ListenAndServe(":8081", mux); err != nil {
