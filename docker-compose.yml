@@ -12,6 +12,8 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
 
   payments_db:
     image: postgres:15-alpine
@@ -24,12 +26,16 @@ services:
       - "5434:5432"
     volumes:
       - payments_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
 
   redis:
     image: redis:7-alpine
     container_name: microservices_redis
     ports:
       - "6379:6379"
+    networks:
+      - microservices-net
 
   ledger_db:
     image: postgres:15-alpine
@@ -42,6 +48,83 @@ services:
       - "5435:5432"
     volumes:
       - ledger_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+
+  # Microservices
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: auth
+    container_name: microservices_auth
+    environment:
+      - DB_DSN=postgres://user:password@postgres:5432/microservices?sslmode=disable
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+    networks:
+      - microservices-net
+
+  payments:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: payments
+    container_name: microservices_payments
+    environment:
+      - DB_DSN=postgres://user:password@payments_db:5432/payments?sslmode=disable
+    ports:
+      - "8082:8082"
+    depends_on:
+      - payments_db
+    networks:
+      - microservices-net
+
+  ledger:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: ledger
+    container_name: microservices_ledger
+    environment:
+      - DB_DSN=postgres://user:password@ledger_db:5432/ledger?sslmode=disable
+    ports:
+      - "8083:8083"
+    depends_on:
+      - ledger_db
+    networks:
+      - microservices-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: gateway
+    container_name: microservices_gateway
+    environment:
+      - REDIS_ADDR=redis:6379
+      - AUTH_SERVICE_URL=http://auth:8081
+      - PAYMENT_SERVICE_URL=http://payments:8082
+      - LEDGER_SERVICE_URL=http://ledger:8083
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth
+      - payments
+      - ledger
+      - redis
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
 
 volumes:
   postgres_data:

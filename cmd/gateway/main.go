@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -188,9 +189,29 @@ func (h *GatewayHandler) routePublic(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// connect to Request
+	// configuration
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
+	authURL := os.Getenv("AUTH_SERVICE_URL")
+	if authURL == "" {
+		authURL = "http://127.0.0.1:8081"
+	}
+
+	paymentURL := os.Getenv("PAYMENT_SERVICE_URL")
+	if paymentURL == "" {
+		paymentURL = "http://127.0.0.1:8082"
+	}
+
+	ledgerURL := os.Getenv("LEDGER_SERVICE_URL")
+	if ledgerURL == "" {
+		ledgerURL = "http://127.0.0.1:8083"
+	}
+
 	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: redisAddr,
 	})
 	// Ping Redis
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
@@ -199,12 +220,7 @@ func main() {
 		log.Println("Redis connection established")
 	}
 
-	gateway := NewGatewayHandler(
-		"http://127.0.0.1:8081", // Auth
-		"http://127.0.0.1:8082", // Payment
-		"http://127.0.0.1:8083", // Ledger
-		rdb,
-	)
+	gateway := NewGatewayHandler(authURL, paymentURL, ledgerURL, rdb)
 
 	server := &http.Server{
 		Addr:    ":8080",
