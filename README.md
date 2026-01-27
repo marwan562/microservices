@@ -181,4 +181,5 @@ We are actively working on making this a complete open-source alternative to Str
 ---
 
 ## 📜 License
-MIT
+
+Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
