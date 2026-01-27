@@ -37,9 +37,9 @@ To provide a developer-first, scalable, and open-source financial infrastructure
 ## Phase 3: Developer Experience & Platform Readiness (Q3)
 *Focus: Integration, SDKs, and "Platform" capabilities.*
 
-- [ ] **SDK Generation Pipeline**:
-    - [ ] Automate generation of `@fintech/node-sdk` and `fintech-python-sdk`.
-    - [ ] Add `google.api.http` annotations to Proto files for OpenAPI spec generation.
+- [x] **SDK Generation Pipeline**:
+    - [x] Automate generation of `@fintech/node-sdk` and `fintech-python-sdk`.
+    - [x] Add `google.api.http` annotations to Proto files for OpenAPI spec generation.
 - [ ] **Auth & Integration**:
     - [ ] Upgrade Auth Service to support **OAuth2 / OIDC** (Client Credentials, Auth Code).
     - [ ] Implement granular API Scopes (e.g., `payments:read`, `ledger:write`).

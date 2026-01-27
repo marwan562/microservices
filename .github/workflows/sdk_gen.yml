@@ -1,0 +1,44 @@
+name: SDK Generation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'proto/**'
+      - '.github/workflows/sdk_gen.yml'
+
+jobs:
+  generate-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate OpenAPI Spec
+        # Using a community action or docker command to generate OpenAPI from Protos
+        # This is a simplification; production setups might use 'buf generate'
+        uses: docker://namely/protoc-all:1.51_2
+        with:
+          args: -d proto -l openapi --with-gateway -o generated/openapi
+
+      - name: Generate Node.js SDK
+        uses: openapi-generators/openapitools-generator-action@v1
+        with:
+          generator: typescript-axios
+          openapi-file: generated/openapi/auth/auth.swagger.json # Example for one service
+          command-args: -o generated/sdks/node/auth
+
+      - name: Generate Python SDK
+        uses: openapi-generators/openapitools-generator-action@v1
+        with:
+          generator: python
+          openapi-file: generated/openapi/auth/auth.swagger.json
+          command-args: -o generated/sdks/python/auth
+
+      # In a real pipeline, we would loop over all openapi files.
+      # For this repo, we demonstrate with Auth service.
+
+      - name: Archive SDKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-sdks
+          path: generated/sdks
