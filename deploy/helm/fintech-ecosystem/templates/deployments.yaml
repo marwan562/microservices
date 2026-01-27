@@ -1,0 +1,62 @@
+{{- range $name, $config := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: fintech-ecosystem
+  labels:
+    {{- include "fintech-ecosystem.labels" $ | nindent 4 }}
+    app: {{ $name }}
+spec:
+  replicas: {{ $config.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      containers:
+      - name: {{ $name }}
+        image: {{ $config.image }}
+        imagePullPolicy: IfNotPresent
+        args: ["{{ $name }}"]
+        env:
+        - name: SERVICE_NAME
+          value: {{ $name | quote }}
+{{- /* Specific Environment Variables */}}
+{{- if $config.env }}
+{{- range $k, $v := $config.env }}
+        - name: {{ $k }}
+          value: {{ tpl $v $ | quote }}
+{{- end }}
+{{- end }}
+{{- /* Global Secrets Injection (HMAC) for Auth and Gateway */}}
+{{- if or (eq $name "auth") (eq $name "gateway") }}
+        - name: API_KEY_HMAC_SECRET
+          value: {{ $.Values.secrets.apiKeyHmacSecret | quote }}
+{{- end }}
+        ports:
+        - containerPort: {{ $config.port }}
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: fintech-ecosystem
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+  - port: {{ $config.port }}
+    targetPort: {{ $config.port }}
+{{- end }}

@@ -235,6 +235,26 @@ services:
     networks:
       - microservices-net
 
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: microservices_loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - microservices-net
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: microservices_promtail
+    volumes:
+      - /var/log:/var/log
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - microservices-net
+
   grafana:
     image: grafana/grafana:latest
     container_name: microservices_grafana
@@ -242,10 +262,14 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
     networks:
       - microservices-net
     depends_on:
       - prometheus
+      - loki
 
 networks:
   microservices-net:
