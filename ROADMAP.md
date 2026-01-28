@@ -10,7 +10,7 @@ To provide a developer-first, scalable, and open-source financial infrastructure
 ## Phase 1: Open Source Foundation (Q1)
 *Focus: Community, Documentation, and Developer Experience.*
 
-- [ ] **Community Standards**: Add `CONTRIBUTING.md`, Code of Conduct, and Pull Request templates.
+- [x] **Community Standards**: Add `CONTRIBUTING.md`, Code of Conduct, and Pull Request templates.
 - [x] **CI/CD Pipelines**: Implement GitHub Actions for:
     - [x] Automated Linting (`golangci-lint`)
     - [x] Unit & Integration Tests
@@ -41,7 +41,7 @@ To provide a developer-first, scalable, and open-source financial infrastructure
     - [x] Automate generation of `@fintech/node-sdk` and `fintech-python-sdk`.
     - [x] Add `google.api.http` annotations to Proto files for OpenAPI spec generation.
 - [ ] **Auth & Integration**:
-    - [ ] Upgrade Auth Service to support **OAuth2 / OIDC** (Client Credentials, Auth Code).
+    - [/] Upgrade Auth Service to support **OAuth2 / OIDC** (Client Credentials, Auth Code).
     - [ ] Implement granular API Scopes (e.g., `payments:read`, `ledger:write`).
 - [ ] **Webhook Reliability**:
     - [ ] Retry policies with exponential backoff.

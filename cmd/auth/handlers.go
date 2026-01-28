@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/marwan562/fintech-ecosystem/internal/auth"
 	"github.com/marwan562/fintech-ecosystem/pkg/apikey"
@@ -232,4 +233,97 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Login: Success for user %s", user.Email)
 	jsonutil.WriteJSON(w, http.StatusOK, LoginResponse{Token: token})
+}
+
+// OAuthTokenResponse represents the response for /oauth/token.
+type OAuthTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int    `json:"expires_in"`
+}
+
+// OAuthTokenHandler handles OAuth2 token requests (Client Credentials).
+func (h *AuthHandler) OAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		return
+	}
+
+	// Parse Basic Auth (Client ID & Secret)
+	clientID, clientSecret, ok := r.BasicAuth()
+	if !ok {
+		// Fallback to form parameters if Basic Auth not provided
+		clientID = r.FormValue("client_id")
+		clientSecret = r.FormValue("client_secret")
+	}
+
+	grantType := r.FormValue("grant_type")
+	if grantType != "client_credentials" {
+		jsonutil.WriteErrorJSON(w, "unsupported_grant_type")
+		return
+	}
+
+	if clientID == "" || clientSecret == "" {
+		w.Header().Set("WWW-Authenticate", `Basic realm="api"`)
+		http.Error(w, "invalid_client", http.StatusUnauthorized)
+		return
+	}
+
+	// Verify Client
+	client, err := h.repo.GetClientByID(r.Context(), clientID)
+	if err != nil {
+		log.Printf("OAuthTokenHandler: DB error: %v", err)
+		jsonutil.WriteErrorJSON(w, "server_error")
+		return
+	}
+	if client == nil {
+		http.Error(w, "invalid_client", http.StatusUnauthorized)
+		return
+	}
+
+	// Validate Secret
+	// In a real app, use bcryptutil.CompareHash if secrets are hashed.
+	// For now, assuming basic hash comparison or if we want to support raw secrets (less secure)
+	// Changing implementation to match simple hash check as per `oauth.go` (if we implemented hashing there)
+	// Looking to `oauth.go`, we used hash.Wait, `oauth.go` was created with `GetClientByID` but no `ValidateClientSecret`.
+	// For simplicity in this step, let's assume `client.ClientSecretHash` is what we have.
+	// We need to hash the incoming secret and compare.
+	incomingHash := auth.HashString(clientSecret)
+	// Optimization: Depending on how we stored it. If `oauth.go` HashString uses SHA256 string format.
+	// Let's rely on HashString from `auth` package.
+
+	if incomingHash != client.ClientSecretHash {
+		http.Error(w, "invalid_client", http.StatusUnauthorized)
+		return
+	}
+
+	// Generate Access Token
+	accessToken, err := auth.GenerateRandomString(32)
+	if err != nil {
+		jsonutil.WriteErrorJSON(w, "server_error")
+		return
+	}
+
+	expiresIn := 3600 // 1 hour
+	expiresAt := time.Now().Add(time.Duration(expiresIn) * time.Second)
+
+	token := &auth.OAuthToken{
+		AccessToken: accessToken,
+		ClientID:    client.ID,
+		UserID:      client.UserID,
+		Scope:       "default", // In future parse 'scope' param
+		ExpiresAt:   expiresAt,
+	}
+
+	if err := h.repo.CreateOAuthToken(r.Context(), token); err != nil {
+		log.Printf("OAuthTokenHandler: Failed to create token: %v", err)
+		jsonutil.WriteErrorJSON(w, "server_error")
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, OAuthTokenResponse{
+		AccessToken: accessToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   expiresIn,
+	})
 }

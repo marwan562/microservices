@@ -91,6 +91,7 @@ func main() {
 	mux.HandleFunc("/register", handler.Register)
 	mux.HandleFunc("/login", handler.Login)
 	mux.HandleFunc("/api_keys", handler.GenerateAPIKey)
+	mux.HandleFunc("/oauth/token", handler.OAuthTokenHandler)
 	// Internal endpoint for Gateway Validation
 	mux.HandleFunc("/validate_key", handler.ValidateAPIKey)
 

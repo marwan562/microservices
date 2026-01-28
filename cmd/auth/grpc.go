@@ -34,3 +34,23 @@ func (s *AuthGRPCServer) ValidateKey(ctx context.Context, req *pb.ValidateKeyReq
 		Environment: key.Environment,
 	}, nil
 }
+
+func (s *AuthGRPCServer) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
+	token, err := s.repo.ValidateOAuthToken(ctx, req.AccessToken)
+	if err != nil {
+		// Log error only if it's not "not found" or "expired" to avoid noise?
+		// Repo returns error on expiry.
+		return &pb.ValidateTokenResponse{Valid: false}, nil
+	}
+	if token == nil {
+		return &pb.ValidateTokenResponse{Valid: false}, nil
+	}
+
+	return &pb.ValidateTokenResponse{
+		Valid:     true,
+		ClientId:  token.ClientID,
+		UserId:    token.UserID,
+		Scope:     token.Scope,
+		ExpiresAt: token.ExpiresAt.Unix(),
+	}, nil
+}
