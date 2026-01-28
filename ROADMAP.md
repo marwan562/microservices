@@ -41,7 +41,7 @@ To provide a developer-first, scalable, and open-source financial infrastructure
     - [x] Automate generation of `@fintech/node-sdk` and `fintech-python-sdk`.
     - [x] Add `google.api.http` annotations to Proto files for OpenAPI spec generation.
 - [ ] **Auth & Integration**:
-    - [/] Upgrade Auth Service to support **OAuth2 / OIDC** (Client Credentials, Auth Code).
+    - [x] Upgrade Auth Service to support **OAuth2 / OIDC** (Client Credentials, Auth Code).
     - [ ] Implement granular API Scopes (e.g., `payments:read`, `ledger:write`).
 - [ ] **Webhook Reliability**:
     - [ ] Retry policies with exponential backoff.
