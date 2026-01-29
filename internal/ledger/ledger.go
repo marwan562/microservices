@@ -73,7 +73,7 @@ func (r *Repository) CreateAccount(ctx context.Context, name string, accType Acc
 		`INSERT INTO accounts (name, type, currency, user_id) VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
 		name, accType, currency, userID).Scan(&acc.ID, &acc.CreatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create account: %w", acc.Currency)
+		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 	acc.Balance = 0
 	return acc, nil
