@@ -28,11 +28,18 @@ func (s *AuthGRPCServer) ValidateKey(ctx context.Context, req *pb.ValidateKeyReq
 		return &pb.ValidateKeyResponse{Valid: false}, nil
 	}
 
+	role := ""
+	if key.OrgID != "" {
+		role = "admin" // Default for API keys
+	}
+
 	return &pb.ValidateKeyResponse{
 		Valid:       true,
 		UserId:      key.UserID,
 		Environment: key.Environment,
 		Scopes:      key.Scopes,
+		OrgId:       key.OrgID,
+		Role:        role,
 	}, nil
 }
 

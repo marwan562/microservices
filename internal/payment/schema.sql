@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS payment_intents (
     status VARCHAR(50) NOT NULL,
     description TEXT,
     user_id UUID NOT NULL, -- Logical foreign key to Auth service User
+    application_fee_amount BIGINT DEFAULT 0,
+    on_behalf_of UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -10,13 +10,15 @@ import (
 
 // PaymentIntent represents a payment transaction intent.
 type PaymentIntent struct {
-	ID          string    `json:"id"`
-	Amount      int64     `json:"amount"` // In cents
-	Currency    string    `json:"currency"`
-	Status      string    `json:"status"` // requires_payment_method, succeeded, failed
-	Description string    `json:"description,omitempty"`
-	UserID      string    `json:"user_id"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID                   string    `json:"id"`
+	Amount               int64     `json:"amount"` // In cents
+	Currency             string    `json:"currency"`
+	Status               string    `json:"status"` // requires_payment_method, succeeded, failed
+	Description          string    `json:"description,omitempty"`
+	UserID               string    `json:"user_id"`
+	ApplicationFeeAmount int64     `json:"application_fee_amount,omitempty"`
+	OnBehalfOf           string    `json:"on_behalf_of,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 // Repository handles database interactions for payments.
@@ -32,9 +34,9 @@ func NewRepository(db *sql.DB) *Repository {
 // CreatePaymentIntent inserts a new payment intent.
 func (r *Repository) CreatePaymentIntent(ctx context.Context, intent *PaymentIntent) error {
 	err := r.db.QueryRowContext(ctx,
-		`INSERT INTO payment_intents (amount, currency, status, description, user_id) 
-		 VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`,
-		intent.Amount, intent.Currency, intent.Status, intent.Description, intent.UserID).
+		`INSERT INTO payment_intents (amount, currency, status, description, user_id, application_fee_amount, on_behalf_of) 
+		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
+		intent.Amount, intent.Currency, intent.Status, intent.Description, intent.UserID, intent.ApplicationFeeAmount, intent.OnBehalfOf).
 		Scan(&intent.ID, &intent.CreatedAt)
 
 	if err != nil {
@@ -47,8 +49,8 @@ func (r *Repository) CreatePaymentIntent(ctx context.Context, intent *PaymentInt
 func (r *Repository) GetPaymentIntent(ctx context.Context, id string) (*PaymentIntent, error) {
 	var intent PaymentIntent
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, amount, currency, status, description, user_id, created_at FROM payment_intents WHERE id = $1",
-		id).Scan(&intent.ID, &intent.Amount, &intent.Currency, &intent.Status, &intent.Description, &intent.UserID, &intent.CreatedAt)
+		"SELECT id, amount, currency, status, description, user_id, application_fee_amount, on_behalf_of, created_at FROM payment_intents WHERE id = $1",
+		id).Scan(&intent.ID, &intent.Amount, &intent.Currency, &intent.Status, &intent.Description, &intent.UserID, &intent.ApplicationFeeAmount, &intent.OnBehalfOf, &intent.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

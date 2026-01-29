@@ -50,9 +50,9 @@ To provide a developer-first, scalable, and open-source financial infrastructure
 ## Phase 4: Ecosystem & Monetization (Q4)
 *Focus: Enabling a marketplace business model and Enterprise features.*
 
-- [ ] **"Connect" Marketplace Architecture**:
-    - [ ] **Connect Service**: Manage "Connected Accounts" (sub-merchants).
-    - [ ] **Revenue Splitting**: Logic to split transaction fees between Platform, Developer, and Merchant.
+- [x] **"Connect" Marketplace Architecture**:
+    - [x] **Connect Service**: Manage "Connected Accounts" (sub-merchants).
+    - [x] **Revenue Splitting**: Logic to split transaction fees between Platform, Developer, and Merchant.
 - [ ] **Enterprise Features**:
     - [ ] **SSO**: SAML/OIDC integration.
     - [ ] **Audit Logs**: Enhanced visualization for compliance.

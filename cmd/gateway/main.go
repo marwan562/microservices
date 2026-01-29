@@ -62,14 +62,14 @@ func NewGatewayHandler(auth, payment, ledger string, rdb *redis.Client, authClie
 }
 
 // validateKeyWithAuthService calls the Auth service to validate the API key hash.
-func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, bool) {
+func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, string, string, bool) {
 	res, err := h.authClient.ValidateKey(ctx, &pb.ValidateKeyRequest{KeyHash: keyHash})
 	if err != nil {
 		log.Printf("Auth service gRPC validation call failed: %v", err)
-		return "", "", "", false
+		return "", "", "", "", "", false
 	}
 
-	return res.UserId, res.Environment, res.Scopes, res.Valid
+	return res.UserId, res.Environment, res.Scopes, res.OrgId, res.Role, res.Valid
 }
 
 // checkRateLimit checks if the key has exceeded 100 req/min.
@@ -113,6 +113,9 @@ func (h *GatewayHandler) proxyRequest(target string, w http.ResponseWriter, r *h
 		if env := r.Header.Get("X-Environment"); env != "" {
 			req.Header.Set("X-Environment", env)
 		}
+		if orgID := r.Header.Get("X-Org-ID"); orgID != "" {
+			req.Header.Set("X-Org-ID", orgID)
+		}
 	}
 
 	proxy.ServeHTTP(w, r)
@@ -148,7 +151,7 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	keyHash := apikey.HashKey(apiKey, h.hmacSecret)
 
 	// Validate with Auth Service
-	userID, env, keyScopes, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
+	userID, env, keyScopes, orgID, role, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
 	if !valid {
 		jsonutil.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid or revoked API Key"})
 		return
@@ -181,6 +184,8 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Inject Context
 	r.Header.Set("X-User-ID", userID)
 	r.Header.Set("X-Environment", env)
+	r.Header.Set("X-Org-ID", orgID)
+	r.Header.Set("X-Role", role)
 
 	// Route to Service
 	switch {

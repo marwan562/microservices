@@ -1,0 +1,64 @@
+
+syntax = "proto3";
+
+package connect;
+
+option go_package = "github.com/marwan562/fintech-ecosystem/proto/connect";
+
+import "google/protobuf/timestamp.proto";
+
+service ConnectService {
+  // CreateAccount creates a new connected account for a sub-merchant.
+  rpc CreateAccount(CreateAccountRequest) returns (Account);
+
+  // GetAccount retrieves a connected account by ID.
+  rpc GetAccount(GetAccountRequest) returns (Account);
+
+  // UpdateAccount updates an existing connected account.
+  rpc UpdateAccount(UpdateAccountRequest) returns (Account);
+}
+
+message CreateAccountRequest {
+  string user_id = 1; // The user who owns this account
+  string type = 2; // e.g., "standard", "express"
+  string country = 3; // e.g., "US"
+  string email = 4;
+  string business_type = 5; // e.g., "individual", "company"
+  Capabilities capabilities = 6;
+}
+
+message UpdateAccountRequest {
+  string id = 1;
+  string email = 2;
+  PayoutSettings payout_settings = 3;
+  double platform_fee_percent = 4;
+}
+
+message GetAccountRequest {
+  string id = 1;
+}
+
+message Account {
+  string id = 1;
+  string user_id = 2;
+  string type = 3;
+  string country = 4;
+  string email = 5;
+  string business_type = 6;
+  string status = 7; // e.g., "active", "pending", "restricted"
+  Capabilities capabilities = 8;
+  PayoutSettings payout_settings = 9;
+  double platform_fee_percent = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message Capabilities {
+  bool transfers = 1; // Ability to receive transfers
+  bool card_payments = 2; // Ability to process card payments
+}
+
+message PayoutSettings {
+  string interval = 1; // e.g., "daily", "weekly", "manual"
+  string bank_account_id = 2; // ID of the bank account where payouts are sent
+}

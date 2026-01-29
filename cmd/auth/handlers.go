@@ -671,6 +671,69 @@ func (h *AuthHandler) TokenIntrospectionHandler(w http.ResponseWriter, r *http.R
 	})
 }
 
+// SSOCallbackRequest defines the payload for mock SSO callback
+type SSOCallbackRequest struct {
+	Provider       string `json:"provider"`
+	ProviderUserID string `json:"provider_user_id"`
+	Email          string `json:"email"`
+}
+
+// SSOCallback handles the response from an external SSO provider.
+func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		return
+	}
+
+	var req SSOCallbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	// 1. Check if external identity already exists
+	user, err := h.repo.GetUserByExternalID(r.Context(), req.Provider, req.ProviderUserID)
+	if err != nil {
+		log.Printf("SSOCallback: DB error: %v", err)
+		jsonutil.WriteErrorJSON(w, "Internal server error")
+		return
+	}
+
+	// 2. If user doesn't exist, create a new one (JIT provisioning)
+	if user == nil {
+		// Mock organization logic: derive org from email domain if possible
+		domain := ""
+		if parts := strings.Split(req.Email, "@"); len(parts) == 2 {
+			domain = parts[1]
+		}
+
+		// Create user without password (SSO only)
+		user, err = h.repo.CreateUser(r.Context(), req.Email, "SSO_MANAGED")
+		if err != nil {
+			log.Printf("SSOCallback: Failed to create user: %v", err)
+			jsonutil.WriteErrorJSON(w, "Failed to provision user")
+			return
+		}
+
+		// Link identity
+		if err := h.repo.LinkExternalIdentity(r.Context(), user.ID, req.Provider, req.ProviderUserID); err != nil {
+			log.Printf("SSOCallback: Failed to link identity: %v", err)
+		}
+
+		// Optional: Auto-add to organization based on domain
+		log.Printf("JIT Provisioned user %s for org %s", user.Email, domain)
+	}
+
+	// 3. Issue JWT
+	token, err := jwtutil.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		jsonutil.WriteErrorJSON(w, "Failed to generate token")
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, LoginResponse{Token: token})
+}
+
 // writeOAuthError writes an OAuth2-compliant error response.
 func writeOAuthError(w http.ResponseWriter, errorCode, description string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")

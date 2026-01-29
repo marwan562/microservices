@@ -11,6 +11,7 @@ import (
 // User represents a registered user in the system.
 type User struct {
 	ID        string    `json:"id"`
+	OrgID     string    `json:"org_id,omitempty"` // Primary or current organization
 	Email     string    `json:"email"`
 	Password  string    `json:"-"` // Never return password
 	CreatedAt time.Time `json:"created_at"`
