@@ -72,6 +72,8 @@ type ValidateKeyResponse struct {
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Environment   string                 `protobuf:"bytes,3,opt,name=environment,proto3" json:"environment,omitempty"`
 	Scopes        string                 `protobuf:"bytes,4,opt,name=scopes,proto3" json:"scopes,omitempty"`
+	OrgId         string                 `protobuf:"bytes,5,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	Role          string                 `protobuf:"bytes,6,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -130,6 +132,20 @@ func (x *ValidateKeyResponse) GetEnvironment() string {
 func (x *ValidateKeyResponse) GetScopes() string {
 	if x != nil {
 		return x.Scopes
+	}
+	return ""
+}
+
+func (x *ValidateKeyResponse) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *ValidateKeyResponse) GetRole() string {
+	if x != nil {
+		return x.Role
 	}
 	return ""
 }
@@ -260,12 +276,14 @@ const file_proto_auth_auth_proto_rawDesc = "" +
 	"\n" +
 	"\x15proto/auth/auth.proto\x12\x04auth\x1a\x1cgoogle/api/annotations.proto\"/\n" +
 	"\x12ValidateKeyRequest\x12\x19\n" +
-	"\bkey_hash\x18\x01 \x01(\tR\akeyHash\"~\n" +
+	"\bkey_hash\x18\x01 \x01(\tR\akeyHash\"\xa9\x01\n" +
 	"\x13ValidateKeyResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12 \n" +
 	"\venvironment\x18\x03 \x01(\tR\venvironment\x12\x16\n" +
-	"\x06scopes\x18\x04 \x01(\tR\x06scopes\"9\n" +
+	"\x06scopes\x18\x04 \x01(\tR\x06scopes\x12\x15\n" +
+	"\x06org_id\x18\x05 \x01(\tR\x05orgId\x12\x12\n" +
+	"\x04role\x18\x06 \x01(\tR\x04role\"9\n" +
 	"\x14ValidateTokenRequest\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"\x98\x01\n" +
 	"\x15ValidateTokenResponse\x12\x14\n" +

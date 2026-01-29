@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/marwan562/fintech-ecosystem/internal/payment"
+	"github.com/marwan562/fintech-ecosystem/pkg/audit"
 	"github.com/marwan562/fintech-ecosystem/pkg/bank"
 	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
 	"github.com/marwan562/fintech-ecosystem/pkg/jwtutil"
@@ -156,6 +157,19 @@ func (h *PaymentHandler) CreatePaymentIntent(w http.ResponseWriter, r *http.Requ
 	}
 
 	payment.PaymentRequests.WithLabelValues("create", "success").Inc()
+
+	// Audit Log
+	audit.Log(r.Context(), audit.AuditLog{
+		ActorID:      userID,
+		Action:       "payment.intent_created",
+		ResourceType: "payment_intent",
+		ResourceID:   intent.ID,
+		Metadata: map[string]interface{}{
+			"amount":   intent.Amount,
+			"currency": intent.Currency,
+		},
+	})
+
 	jsonutil.WriteJSON(w, http.StatusCreated, intent)
 }
 
@@ -368,6 +382,18 @@ func (h *PaymentHandler) RefundPaymentIntent(w http.ResponseWriter, r *http.Requ
 	if err := h.kafkaProducer.Publish(r.Context(), intent.ID, kafkaEventBody); err != nil {
 		log.Printf("Failed to publish refund event to Kafka: %v", err)
 	}
+
+	// Audit Log
+	audit.Log(r.Context(), audit.AuditLog{
+		ActorID:      intent.UserID, // Typically this would be the admin who performed the refund
+		Action:       "payment.refunded",
+		ResourceType: "payment_intent",
+		ResourceID:   intent.ID,
+		Metadata: map[string]interface{}{
+			"amount":   intent.Amount,
+			"currency": intent.Currency,
+		},
+	})
 
 	payment.PaymentRequests.WithLabelValues("refund", "success").Inc()
 	intent.Status = "refunded"

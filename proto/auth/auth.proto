@@ -32,6 +32,8 @@ message ValidateKeyResponse {
   string user_id = 2;
   string environment = 3;
   string scopes = 4;
+  string org_id = 5;
+  string role = 6;
 }
 
 message ValidateTokenRequest {

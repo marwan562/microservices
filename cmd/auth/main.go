@@ -97,6 +97,7 @@ func main() {
 	mux.HandleFunc("/oauth/introspect", handler.TokenIntrospectionHandler)
 	// Internal endpoint for Gateway Validation
 	mux.HandleFunc("/validate_key", handler.ValidateAPIKey)
+	mux.HandleFunc("/sso/callback", handler.SSOCallback)
 
 	log.Println("Auth service HTTP starting on :8081")
 
