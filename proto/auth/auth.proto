@@ -21,6 +21,56 @@ service AuthService {
     };
   }
 
+  // --- SSO Management ---
+  
+  rpc CreateSSOProvider(CreateSSOProviderRequest) returns (SSOProvider) {
+    option (google.api.http) = {
+      post: "/v1/auth/sso/providers"
+      body: "*"
+    };
+  }
+
+  rpc GetSSOProvider(GetSSOProviderRequest) returns (SSOProvider) {
+    option (google.api.http) = {
+      get: "/v1/auth/sso/providers/{id}"
+    };
+  }
+
+  rpc InitiateSSO(InitiateSSORequest) returns (InitiateSSOResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/sso/initiate"
+      body: "*"
+    };
+  }
+
+  // --- Audit Logs ---
+
+  rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse) {
+    option (google.api.http) = {
+      get: "/v1/auth/audit_logs"
+    };
+  }
+
+  // --- Team / RBAC Management ---
+
+  rpc AddTeamMember(AddTeamMemberRequest) returns (Membership) {
+    option (google.api.http) = {
+      post: "/v1/auth/teams/members"
+      body: "*"
+    };
+  }
+
+  rpc RemoveTeamMember(RemoveTeamMemberRequest) returns (RemoveTeamMemberResponse) {
+    option (google.api.http) = {
+      delete: "/v1/auth/teams/members"
+    };
+  }
+
+  rpc ListTeamMembers(ListTeamMembersRequest) returns (ListTeamMembersResponse) {
+    option (google.api.http) = {
+      get: "/v1/auth/teams/{org_id}/members"
+    };
+  }
 }
 
 message ValidateKeyRequest {
@@ -46,5 +96,91 @@ message ValidateTokenResponse {
   string user_id = 3;
   string scope = 4;
   int64 expires_at = 5;
+}
+
+message SSOProvider {
+  string id = 1;
+  string org_id = 2;
+  string name = 3;
+  string provider_type = 4;
+  string issuer_url = 5;
+  string client_id = 6;
+  bool active = 7;
+}
+
+message CreateSSOProviderRequest {
+  string org_id = 1;
+  string name = 2;
+  string provider_type = 3;
+  string issuer_url = 4;
+  string client_id = 5;
+  string client_secret = 6;
+}
+
+message GetSSOProviderRequest {
+  string id = 1;
+}
+
+message InitiateSSORequest {
+  string email = 1;
+  string redirect_uri = 2;
+}
+
+message InitiateSSOResponse {
+  string auth_url = 1;
+}
+
+message AuditLog {
+  string id = 1;
+  string org_id = 2;
+  string user_id = 3;
+  string action = 4;
+  string resource_type = 5;
+  string resource_id = 6;
+  string metadata = 7; // JSON string
+  string ip_address = 8;
+  string created_at = 9;
+}
+
+message GetAuditLogsRequest {
+  string org_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  string action = 4;
+}
+
+message GetAuditLogsResponse {
+  repeated AuditLog logs = 1;
+  int32 total_count = 2;
+}
+
+message Membership {
+  string user_id = 1;
+  string org_id = 2;
+  string role = 3;
+  string created_at = 4;
+}
+
+message AddTeamMemberRequest {
+  string org_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+message RemoveTeamMemberRequest {
+  string org_id = 1;
+  string user_id = 2;
+}
+
+message RemoveTeamMemberResponse {
+  bool success = 1;
+}
+
+message ListTeamMembersRequest {
+  string org_id = 1;
+}
+
+message ListTeamMembersResponse {
+  repeated Membership memberships = 1;
 }
 

@@ -270,6 +270,862 @@ func (x *ValidateTokenResponse) GetExpiresAt() int64 {
 	return 0
 }
 
+type SSOProvider struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrgId         string                 `protobuf:"bytes,2,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	ProviderType  string                 `protobuf:"bytes,4,opt,name=provider_type,json=providerType,proto3" json:"provider_type,omitempty"`
+	IssuerUrl     string                 `protobuf:"bytes,5,opt,name=issuer_url,json=issuerUrl,proto3" json:"issuer_url,omitempty"`
+	ClientId      string                 `protobuf:"bytes,6,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	Active        bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SSOProvider) Reset() {
+	*x = SSOProvider{}
+	mi := &file_proto_auth_auth_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SSOProvider) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SSOProvider) ProtoMessage() {}
+
+func (x *SSOProvider) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SSOProvider.ProtoReflect.Descriptor instead.
+func (*SSOProvider) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SSOProvider) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SSOProvider) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *SSOProvider) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SSOProvider) GetProviderType() string {
+	if x != nil {
+		return x.ProviderType
+	}
+	return ""
+}
+
+func (x *SSOProvider) GetIssuerUrl() string {
+	if x != nil {
+		return x.IssuerUrl
+	}
+	return ""
+}
+
+func (x *SSOProvider) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *SSOProvider) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+type CreateSSOProviderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	ProviderType  string                 `protobuf:"bytes,3,opt,name=provider_type,json=providerType,proto3" json:"provider_type,omitempty"`
+	IssuerUrl     string                 `protobuf:"bytes,4,opt,name=issuer_url,json=issuerUrl,proto3" json:"issuer_url,omitempty"`
+	ClientId      string                 `protobuf:"bytes,5,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	ClientSecret  string                 `protobuf:"bytes,6,opt,name=client_secret,json=clientSecret,proto3" json:"client_secret,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSSOProviderRequest) Reset() {
+	*x = CreateSSOProviderRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSSOProviderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSSOProviderRequest) ProtoMessage() {}
+
+func (x *CreateSSOProviderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSSOProviderRequest.ProtoReflect.Descriptor instead.
+func (*CreateSSOProviderRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CreateSSOProviderRequest) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *CreateSSOProviderRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateSSOProviderRequest) GetProviderType() string {
+	if x != nil {
+		return x.ProviderType
+	}
+	return ""
+}
+
+func (x *CreateSSOProviderRequest) GetIssuerUrl() string {
+	if x != nil {
+		return x.IssuerUrl
+	}
+	return ""
+}
+
+func (x *CreateSSOProviderRequest) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *CreateSSOProviderRequest) GetClientSecret() string {
+	if x != nil {
+		return x.ClientSecret
+	}
+	return ""
+}
+
+type GetSSOProviderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSSOProviderRequest) Reset() {
+	*x = GetSSOProviderRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSSOProviderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSSOProviderRequest) ProtoMessage() {}
+
+func (x *GetSSOProviderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSSOProviderRequest.ProtoReflect.Descriptor instead.
+func (*GetSSOProviderRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetSSOProviderRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type InitiateSSORequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	RedirectUri   string                 `protobuf:"bytes,2,opt,name=redirect_uri,json=redirectUri,proto3" json:"redirect_uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InitiateSSORequest) Reset() {
+	*x = InitiateSSORequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitiateSSORequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitiateSSORequest) ProtoMessage() {}
+
+func (x *InitiateSSORequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitiateSSORequest.ProtoReflect.Descriptor instead.
+func (*InitiateSSORequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *InitiateSSORequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *InitiateSSORequest) GetRedirectUri() string {
+	if x != nil {
+		return x.RedirectUri
+	}
+	return ""
+}
+
+type InitiateSSOResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AuthUrl       string                 `protobuf:"bytes,1,opt,name=auth_url,json=authUrl,proto3" json:"auth_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InitiateSSOResponse) Reset() {
+	*x = InitiateSSOResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitiateSSOResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitiateSSOResponse) ProtoMessage() {}
+
+func (x *InitiateSSOResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitiateSSOResponse.ProtoReflect.Descriptor instead.
+func (*InitiateSSOResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *InitiateSSOResponse) GetAuthUrl() string {
+	if x != nil {
+		return x.AuthUrl
+	}
+	return ""
+}
+
+type AuditLog struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrgId         string                 `protobuf:"bytes,2,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	ResourceType  string                 `protobuf:"bytes,5,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	ResourceId    string                 `protobuf:"bytes,6,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	Metadata      string                 `protobuf:"bytes,7,opt,name=metadata,proto3" json:"metadata,omitempty"` // JSON string
+	IpAddress     string                 `protobuf:"bytes,8,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditLog) Reset() {
+	*x = AuditLog{}
+	mi := &file_proto_auth_auth_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditLog) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditLog) ProtoMessage() {}
+
+func (x *AuditLog) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditLog.ProtoReflect.Descriptor instead.
+func (*AuditLog) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AuditLog) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AuditLog) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *AuditLog) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AuditLog) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *AuditLog) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *AuditLog) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *AuditLog) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *AuditLog) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *AuditLog) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type GetAuditLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAuditLogsRequest) Reset() {
+	*x = GetAuditLogsRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAuditLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAuditLogsRequest) ProtoMessage() {}
+
+func (x *GetAuditLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAuditLogsRequest.ProtoReflect.Descriptor instead.
+func (*GetAuditLogsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetAuditLogsRequest) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *GetAuditLogsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetAuditLogsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *GetAuditLogsRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+type GetAuditLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Logs          []*AuditLog            `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
+	TotalCount    int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAuditLogsResponse) Reset() {
+	*x = GetAuditLogsResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAuditLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAuditLogsResponse) ProtoMessage() {}
+
+func (x *GetAuditLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAuditLogsResponse.ProtoReflect.Descriptor instead.
+func (*GetAuditLogsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetAuditLogsResponse) GetLogs() []*AuditLog {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
+func (x *GetAuditLogsResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+type Membership struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	OrgId         string                 `protobuf:"bytes,2,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Membership) Reset() {
+	*x = Membership{}
+	mi := &file_proto_auth_auth_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Membership) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Membership) ProtoMessage() {}
+
+func (x *Membership) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Membership.ProtoReflect.Descriptor instead.
+func (*Membership) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *Membership) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Membership) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *Membership) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *Membership) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type AddTeamMemberRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddTeamMemberRequest) Reset() {
+	*x = AddTeamMemberRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddTeamMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddTeamMemberRequest) ProtoMessage() {}
+
+func (x *AddTeamMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddTeamMemberRequest.ProtoReflect.Descriptor instead.
+func (*AddTeamMemberRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *AddTeamMemberRequest) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *AddTeamMemberRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AddTeamMemberRequest) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+type RemoveTeamMemberRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveTeamMemberRequest) Reset() {
+	*x = RemoveTeamMemberRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTeamMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTeamMemberRequest) ProtoMessage() {}
+
+func (x *RemoveTeamMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTeamMemberRequest.ProtoReflect.Descriptor instead.
+func (*RemoveTeamMemberRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RemoveTeamMemberRequest) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+func (x *RemoveTeamMemberRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type RemoveTeamMemberResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveTeamMemberResponse) Reset() {
+	*x = RemoveTeamMemberResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTeamMemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTeamMemberResponse) ProtoMessage() {}
+
+func (x *RemoveTeamMemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTeamMemberResponse.ProtoReflect.Descriptor instead.
+func (*RemoveTeamMemberResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RemoveTeamMemberResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type ListTeamMembersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTeamMembersRequest) Reset() {
+	*x = ListTeamMembersRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTeamMembersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTeamMembersRequest) ProtoMessage() {}
+
+func (x *ListTeamMembersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTeamMembersRequest.ProtoReflect.Descriptor instead.
+func (*ListTeamMembersRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ListTeamMembersRequest) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
+	}
+	return ""
+}
+
+type ListTeamMembersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Memberships   []*Membership          `protobuf:"bytes,1,rep,name=memberships,proto3" json:"memberships,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTeamMembersResponse) Reset() {
+	*x = ListTeamMembersResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTeamMembersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTeamMembersResponse) ProtoMessage() {}
+
+func (x *ListTeamMembersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTeamMembersResponse.ProtoReflect.Descriptor instead.
+func (*ListTeamMembersResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListTeamMembersResponse) GetMemberships() []*Membership {
+	if x != nil {
+		return x.Memberships
+	}
+	return nil
+}
+
 var File_proto_auth_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_auth_proto_rawDesc = "" +
@@ -292,10 +1148,83 @@ const file_proto_auth_auth_proto_rawDesc = "" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12\x1d\n" +
 	"\n" +
-	"expires_at\x18\x05 \x01(\x03R\texpiresAt2\xdd\x01\n" +
+	"expires_at\x18\x05 \x01(\x03R\texpiresAt\"\xc1\x01\n" +
+	"\vSSOProvider\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
+	"\x06org_id\x18\x02 \x01(\tR\x05orgId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12#\n" +
+	"\rprovider_type\x18\x04 \x01(\tR\fproviderType\x12\x1d\n" +
+	"\n" +
+	"issuer_url\x18\x05 \x01(\tR\tissuerUrl\x12\x1b\n" +
+	"\tclient_id\x18\x06 \x01(\tR\bclientId\x12\x16\n" +
+	"\x06active\x18\a \x01(\bR\x06active\"\xcb\x01\n" +
+	"\x18CreateSSOProviderRequest\x12\x15\n" +
+	"\x06org_id\x18\x01 \x01(\tR\x05orgId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
+	"\rprovider_type\x18\x03 \x01(\tR\fproviderType\x12\x1d\n" +
+	"\n" +
+	"issuer_url\x18\x04 \x01(\tR\tissuerUrl\x12\x1b\n" +
+	"\tclient_id\x18\x05 \x01(\tR\bclientId\x12#\n" +
+	"\rclient_secret\x18\x06 \x01(\tR\fclientSecret\"'\n" +
+	"\x15GetSSOProviderRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
+	"\x12InitiateSSORequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12!\n" +
+	"\fredirect_uri\x18\x02 \x01(\tR\vredirectUri\"0\n" +
+	"\x13InitiateSSOResponse\x12\x19\n" +
+	"\bauth_url\x18\x01 \x01(\tR\aauthUrl\"\x82\x02\n" +
+	"\bAuditLog\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
+	"\x06org_id\x18\x02 \x01(\tR\x05orgId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\x12#\n" +
+	"\rresource_type\x18\x05 \x01(\tR\fresourceType\x12\x1f\n" +
+	"\vresource_id\x18\x06 \x01(\tR\n" +
+	"resourceId\x12\x1a\n" +
+	"\bmetadata\x18\a \x01(\tR\bmetadata\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\b \x01(\tR\tipAddress\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt\"r\n" +
+	"\x13GetAuditLogsRequest\x12\x15\n" +
+	"\x06org_id\x18\x01 \x01(\tR\x05orgId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x03 \x01(\x05R\x06offset\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\"[\n" +
+	"\x14GetAuditLogsResponse\x12\"\n" +
+	"\x04logs\x18\x01 \x03(\v2\x0e.auth.AuditLogR\x04logs\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x05R\n" +
+	"totalCount\"o\n" +
+	"\n" +
+	"Membership\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x15\n" +
+	"\x06org_id\x18\x02 \x01(\tR\x05orgId\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\"Z\n" +
+	"\x14AddTeamMemberRequest\x12\x15\n" +
+	"\x06org_id\x18\x01 \x01(\tR\x05orgId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\"I\n" +
+	"\x17RemoveTeamMemberRequest\x12\x15\n" +
+	"\x06org_id\x18\x01 \x01(\tR\x05orgId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\"4\n" +
+	"\x18RemoveTeamMemberResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"/\n" +
+	"\x16ListTeamMembersRequest\x12\x15\n" +
+	"\x06org_id\x18\x01 \x01(\tR\x05orgId\"M\n" +
+	"\x17ListTeamMembersResponse\x122\n" +
+	"\vmemberships\x18\x01 \x03(\v2\x10.auth.MembershipR\vmemberships2\xc7\a\n" +
 	"\vAuthService\x12`\n" +
 	"\vValidateKey\x12\x18.auth.ValidateKeyRequest\x1a\x19.auth.ValidateKeyResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/validate\x12l\n" +
-	"\rValidateToken\x12\x1a.auth.ValidateTokenRequest\x1a\x1b.auth.ValidateTokenResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/auth/validate_tokenB3Z1github.com/marwan562/fintech-ecosystem/proto/authb\x06proto3"
+	"\rValidateToken\x12\x1a.auth.ValidateTokenRequest\x1a\x1b.auth.ValidateTokenResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/auth/validate_token\x12i\n" +
+	"\x11CreateSSOProvider\x12\x1e.auth.CreateSSOProviderRequest\x1a\x11.auth.SSOProvider\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/auth/sso/providers\x12e\n" +
+	"\x0eGetSSOProvider\x12\x1b.auth.GetSSOProviderRequest\x1a\x11.auth.SSOProvider\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/auth/sso/providers/{id}\x12d\n" +
+	"\vInitiateSSO\x12\x18.auth.InitiateSSORequest\x1a\x19.auth.InitiateSSOResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/auth/sso/initiate\x12b\n" +
+	"\fGetAuditLogs\x12\x19.auth.GetAuditLogsRequest\x1a\x1a.auth.GetAuditLogsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/auth/audit_logs\x12`\n" +
+	"\rAddTeamMember\x12\x1a.auth.AddTeamMemberRequest\x1a\x10.auth.Membership\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/auth/teams/members\x12q\n" +
+	"\x10RemoveTeamMember\x12\x1d.auth.RemoveTeamMemberRequest\x1a\x1e.auth.RemoveTeamMemberResponse\"\x1e\x82\xd3\xe4\x93\x02\x18*\x16/v1/auth/teams/members\x12w\n" +
+	"\x0fListTeamMembers\x12\x1c.auth.ListTeamMembersRequest\x1a\x1d.auth.ListTeamMembersResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/v1/auth/teams/{org_id}/membersB3Z1github.com/marwan562/fintech-ecosystem/proto/authb\x06proto3"
 
 var (
 	file_proto_auth_auth_proto_rawDescOnce sync.Once
@@ -309,23 +1238,53 @@ func file_proto_auth_auth_proto_rawDescGZIP() []byte {
 	return file_proto_auth_auth_proto_rawDescData
 }
 
-var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_proto_auth_auth_proto_goTypes = []any{
-	(*ValidateKeyRequest)(nil),    // 0: auth.ValidateKeyRequest
-	(*ValidateKeyResponse)(nil),   // 1: auth.ValidateKeyResponse
-	(*ValidateTokenRequest)(nil),  // 2: auth.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil), // 3: auth.ValidateTokenResponse
+	(*ValidateKeyRequest)(nil),       // 0: auth.ValidateKeyRequest
+	(*ValidateKeyResponse)(nil),      // 1: auth.ValidateKeyResponse
+	(*ValidateTokenRequest)(nil),     // 2: auth.ValidateTokenRequest
+	(*ValidateTokenResponse)(nil),    // 3: auth.ValidateTokenResponse
+	(*SSOProvider)(nil),              // 4: auth.SSOProvider
+	(*CreateSSOProviderRequest)(nil), // 5: auth.CreateSSOProviderRequest
+	(*GetSSOProviderRequest)(nil),    // 6: auth.GetSSOProviderRequest
+	(*InitiateSSORequest)(nil),       // 7: auth.InitiateSSORequest
+	(*InitiateSSOResponse)(nil),      // 8: auth.InitiateSSOResponse
+	(*AuditLog)(nil),                 // 9: auth.AuditLog
+	(*GetAuditLogsRequest)(nil),      // 10: auth.GetAuditLogsRequest
+	(*GetAuditLogsResponse)(nil),     // 11: auth.GetAuditLogsResponse
+	(*Membership)(nil),               // 12: auth.Membership
+	(*AddTeamMemberRequest)(nil),     // 13: auth.AddTeamMemberRequest
+	(*RemoveTeamMemberRequest)(nil),  // 14: auth.RemoveTeamMemberRequest
+	(*RemoveTeamMemberResponse)(nil), // 15: auth.RemoveTeamMemberResponse
+	(*ListTeamMembersRequest)(nil),   // 16: auth.ListTeamMembersRequest
+	(*ListTeamMembersResponse)(nil),  // 17: auth.ListTeamMembersResponse
 }
 var file_proto_auth_auth_proto_depIdxs = []int32{
-	0, // 0: auth.AuthService.ValidateKey:input_type -> auth.ValidateKeyRequest
-	2, // 1: auth.AuthService.ValidateToken:input_type -> auth.ValidateTokenRequest
-	1, // 2: auth.AuthService.ValidateKey:output_type -> auth.ValidateKeyResponse
-	3, // 3: auth.AuthService.ValidateToken:output_type -> auth.ValidateTokenResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	9,  // 0: auth.GetAuditLogsResponse.logs:type_name -> auth.AuditLog
+	12, // 1: auth.ListTeamMembersResponse.memberships:type_name -> auth.Membership
+	0,  // 2: auth.AuthService.ValidateKey:input_type -> auth.ValidateKeyRequest
+	2,  // 3: auth.AuthService.ValidateToken:input_type -> auth.ValidateTokenRequest
+	5,  // 4: auth.AuthService.CreateSSOProvider:input_type -> auth.CreateSSOProviderRequest
+	6,  // 5: auth.AuthService.GetSSOProvider:input_type -> auth.GetSSOProviderRequest
+	7,  // 6: auth.AuthService.InitiateSSO:input_type -> auth.InitiateSSORequest
+	10, // 7: auth.AuthService.GetAuditLogs:input_type -> auth.GetAuditLogsRequest
+	13, // 8: auth.AuthService.AddTeamMember:input_type -> auth.AddTeamMemberRequest
+	14, // 9: auth.AuthService.RemoveTeamMember:input_type -> auth.RemoveTeamMemberRequest
+	16, // 10: auth.AuthService.ListTeamMembers:input_type -> auth.ListTeamMembersRequest
+	1,  // 11: auth.AuthService.ValidateKey:output_type -> auth.ValidateKeyResponse
+	3,  // 12: auth.AuthService.ValidateToken:output_type -> auth.ValidateTokenResponse
+	4,  // 13: auth.AuthService.CreateSSOProvider:output_type -> auth.SSOProvider
+	4,  // 14: auth.AuthService.GetSSOProvider:output_type -> auth.SSOProvider
+	8,  // 15: auth.AuthService.InitiateSSO:output_type -> auth.InitiateSSOResponse
+	11, // 16: auth.AuthService.GetAuditLogs:output_type -> auth.GetAuditLogsResponse
+	12, // 17: auth.AuthService.AddTeamMember:output_type -> auth.Membership
+	15, // 18: auth.AuthService.RemoveTeamMember:output_type -> auth.RemoveTeamMemberResponse
+	17, // 19: auth.AuthService.ListTeamMembers:output_type -> auth.ListTeamMembersResponse
+	11, // [11:20] is the sub-list for method output_type
+	2,  // [2:11] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_auth_auth_proto_init() }
@@ -339,7 +1298,7 @@ func file_proto_auth_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_auth_auth_proto_rawDesc), len(file_proto_auth_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

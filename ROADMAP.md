@@ -53,10 +53,10 @@ To provide a developer-first, scalable, and open-source financial infrastructure
 - [x] **"Connect" Marketplace Architecture**:
     - [x] **Connect Service**: Manage "Connected Accounts" (sub-merchants).
     - [x] **Revenue Splitting**: Logic to split transaction fees between Platform, Developer, and Merchant.
-- [ ] **Enterprise Features**:
-    - [ ] **SSO**: SAML/OIDC integration.
-    - [ ] **Audit Logs**: Enhanced visualization for compliance.
-    - [ ] **Team Management**: RBAC for organization teams.
+- [x] **Enterprise Features**:
+    - [x] **SSO**: SAML/OIDC integration.
+    - [x] **Audit Logs**: Enhanced visualization for compliance.
+    - [x] **Team Management**: RBAC for organization teams.
 
 ## Phase 5: Future & Community
 *Focus: Sustainable Open Source Growth.*

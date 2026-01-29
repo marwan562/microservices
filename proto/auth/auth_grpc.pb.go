@@ -19,8 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_ValidateKey_FullMethodName   = "/auth.AuthService/ValidateKey"
-	AuthService_ValidateToken_FullMethodName = "/auth.AuthService/ValidateToken"
+	AuthService_ValidateKey_FullMethodName       = "/auth.AuthService/ValidateKey"
+	AuthService_ValidateToken_FullMethodName     = "/auth.AuthService/ValidateToken"
+	AuthService_CreateSSOProvider_FullMethodName = "/auth.AuthService/CreateSSOProvider"
+	AuthService_GetSSOProvider_FullMethodName    = "/auth.AuthService/GetSSOProvider"
+	AuthService_InitiateSSO_FullMethodName       = "/auth.AuthService/InitiateSSO"
+	AuthService_GetAuditLogs_FullMethodName      = "/auth.AuthService/GetAuditLogs"
+	AuthService_AddTeamMember_FullMethodName     = "/auth.AuthService/AddTeamMember"
+	AuthService_RemoveTeamMember_FullMethodName  = "/auth.AuthService/RemoveTeamMember"
+	AuthService_ListTeamMembers_FullMethodName   = "/auth.AuthService/ListTeamMembers"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -29,6 +36,13 @@ const (
 type AuthServiceClient interface {
 	ValidateKey(ctx context.Context, in *ValidateKeyRequest, opts ...grpc.CallOption) (*ValidateKeyResponse, error)
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	CreateSSOProvider(ctx context.Context, in *CreateSSOProviderRequest, opts ...grpc.CallOption) (*SSOProvider, error)
+	GetSSOProvider(ctx context.Context, in *GetSSOProviderRequest, opts ...grpc.CallOption) (*SSOProvider, error)
+	InitiateSSO(ctx context.Context, in *InitiateSSORequest, opts ...grpc.CallOption) (*InitiateSSOResponse, error)
+	GetAuditLogs(ctx context.Context, in *GetAuditLogsRequest, opts ...grpc.CallOption) (*GetAuditLogsResponse, error)
+	AddTeamMember(ctx context.Context, in *AddTeamMemberRequest, opts ...grpc.CallOption) (*Membership, error)
+	RemoveTeamMember(ctx context.Context, in *RemoveTeamMemberRequest, opts ...grpc.CallOption) (*RemoveTeamMemberResponse, error)
+	ListTeamMembers(ctx context.Context, in *ListTeamMembersRequest, opts ...grpc.CallOption) (*ListTeamMembersResponse, error)
 }
 
 type authServiceClient struct {
@@ -59,12 +73,89 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 	return out, nil
 }
 
+func (c *authServiceClient) CreateSSOProvider(ctx context.Context, in *CreateSSOProviderRequest, opts ...grpc.CallOption) (*SSOProvider, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SSOProvider)
+	err := c.cc.Invoke(ctx, AuthService_CreateSSOProvider_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetSSOProvider(ctx context.Context, in *GetSSOProviderRequest, opts ...grpc.CallOption) (*SSOProvider, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SSOProvider)
+	err := c.cc.Invoke(ctx, AuthService_GetSSOProvider_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) InitiateSSO(ctx context.Context, in *InitiateSSORequest, opts ...grpc.CallOption) (*InitiateSSOResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitiateSSOResponse)
+	err := c.cc.Invoke(ctx, AuthService_InitiateSSO_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetAuditLogs(ctx context.Context, in *GetAuditLogsRequest, opts ...grpc.CallOption) (*GetAuditLogsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAuditLogsResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetAuditLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AddTeamMember(ctx context.Context, in *AddTeamMemberRequest, opts ...grpc.CallOption) (*Membership, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Membership)
+	err := c.cc.Invoke(ctx, AuthService_AddTeamMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) RemoveTeamMember(ctx context.Context, in *RemoveTeamMemberRequest, opts ...grpc.CallOption) (*RemoveTeamMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveTeamMemberResponse)
+	err := c.cc.Invoke(ctx, AuthService_RemoveTeamMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ListTeamMembers(ctx context.Context, in *ListTeamMembersRequest, opts ...grpc.CallOption) (*ListTeamMembersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTeamMembersResponse)
+	err := c.cc.Invoke(ctx, AuthService_ListTeamMembers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 type AuthServiceServer interface {
 	ValidateKey(context.Context, *ValidateKeyRequest) (*ValidateKeyResponse, error)
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	CreateSSOProvider(context.Context, *CreateSSOProviderRequest) (*SSOProvider, error)
+	GetSSOProvider(context.Context, *GetSSOProviderRequest) (*SSOProvider, error)
+	InitiateSSO(context.Context, *InitiateSSORequest) (*InitiateSSOResponse, error)
+	GetAuditLogs(context.Context, *GetAuditLogsRequest) (*GetAuditLogsResponse, error)
+	AddTeamMember(context.Context, *AddTeamMemberRequest) (*Membership, error)
+	RemoveTeamMember(context.Context, *RemoveTeamMemberRequest) (*RemoveTeamMemberResponse, error)
+	ListTeamMembers(context.Context, *ListTeamMembersRequest) (*ListTeamMembersResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -80,6 +171,27 @@ func (UnimplementedAuthServiceServer) ValidateKey(context.Context, *ValidateKeyR
 }
 func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ValidateToken not implemented")
+}
+func (UnimplementedAuthServiceServer) CreateSSOProvider(context.Context, *CreateSSOProviderRequest) (*SSOProvider, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSSOProvider not implemented")
+}
+func (UnimplementedAuthServiceServer) GetSSOProvider(context.Context, *GetSSOProviderRequest) (*SSOProvider, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSSOProvider not implemented")
+}
+func (UnimplementedAuthServiceServer) InitiateSSO(context.Context, *InitiateSSORequest) (*InitiateSSOResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InitiateSSO not implemented")
+}
+func (UnimplementedAuthServiceServer) GetAuditLogs(context.Context, *GetAuditLogsRequest) (*GetAuditLogsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAuditLogs not implemented")
+}
+func (UnimplementedAuthServiceServer) AddTeamMember(context.Context, *AddTeamMemberRequest) (*Membership, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddTeamMember not implemented")
+}
+func (UnimplementedAuthServiceServer) RemoveTeamMember(context.Context, *RemoveTeamMemberRequest) (*RemoveTeamMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveTeamMember not implemented")
+}
+func (UnimplementedAuthServiceServer) ListTeamMembers(context.Context, *ListTeamMembersRequest) (*ListTeamMembersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTeamMembers not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -138,6 +250,132 @@ func _AuthService_ValidateToken_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_CreateSSOProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSSOProviderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).CreateSSOProvider(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_CreateSSOProvider_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).CreateSSOProvider(ctx, req.(*CreateSSOProviderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetSSOProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSSOProviderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetSSOProvider(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetSSOProvider_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetSSOProvider(ctx, req.(*GetSSOProviderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_InitiateSSO_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitiateSSORequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).InitiateSSO(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_InitiateSSO_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).InitiateSSO(ctx, req.(*InitiateSSORequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetAuditLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAuditLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetAuditLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetAuditLogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetAuditLogs(ctx, req.(*GetAuditLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AddTeamMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddTeamMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AddTeamMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AddTeamMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AddTeamMember(ctx, req.(*AddTeamMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_RemoveTeamMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveTeamMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RemoveTeamMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_RemoveTeamMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RemoveTeamMember(ctx, req.(*RemoveTeamMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ListTeamMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTeamMembersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListTeamMembers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ListTeamMembers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListTeamMembers(ctx, req.(*ListTeamMembersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +390,34 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ValidateToken",
 			Handler:    _AuthService_ValidateToken_Handler,
+		},
+		{
+			MethodName: "CreateSSOProvider",
+			Handler:    _AuthService_CreateSSOProvider_Handler,
+		},
+		{
+			MethodName: "GetSSOProvider",
+			Handler:    _AuthService_GetSSOProvider_Handler,
+		},
+		{
+			MethodName: "InitiateSSO",
+			Handler:    _AuthService_InitiateSSO_Handler,
+		},
+		{
+			MethodName: "GetAuditLogs",
+			Handler:    _AuthService_GetAuditLogs_Handler,
+		},
+		{
+			MethodName: "AddTeamMember",
+			Handler:    _AuthService_AddTeamMember_Handler,
+		},
+		{
+			MethodName: "RemoveTeamMember",
+			Handler:    _AuthService_RemoveTeamMember_Handler,
+		},
+		{
+			MethodName: "ListTeamMembers",
+			Handler:    _AuthService_ListTeamMembers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
