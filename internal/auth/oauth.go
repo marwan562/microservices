@@ -11,6 +11,18 @@ import (
 	"time"
 )
 
+// DB defines an interface for database operations.
+type DB interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+// Row defines an interface for sql.Row.
+type Row interface {
+	Scan(dest ...any) error
+}
+
 // OAuthClient represents a registered OAuth client application.
 type OAuthClient struct {
 	ID               string    `json:"id"`

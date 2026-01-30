@@ -12,6 +12,26 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// DB defines an interface for database operations, shared by sql.DB and sql.Tx.
+type DB interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error)
+}
+
+// Row defines an interface for sql.Row to allow mocking.
+type Row interface {
+	Scan(dest ...any) error
+}
+
+// Tx defines an interface for sql.Tx to allow mocking.
+type Tx interface {
+	DB
+	Commit() error
+	Rollback() error
+}
+
 type AccountType string
 type TransactionType string
 
@@ -54,12 +74,42 @@ type Entry struct {
 	CreatedAt     time.Time       `json:"created_at"`
 }
 
+// sqlDBWrapper wraps *sql.DB to satisfy the DB interface.
+type sqlDBWrapper struct {
+	*sql.DB
+}
+
+func (w *sqlDBWrapper) QueryRowContext(ctx context.Context, query string, args ...any) Row {
+	return w.DB.QueryRowContext(ctx, query, args...)
+}
+
+func (w *sqlDBWrapper) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
+	tx, err := w.DB.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &sqlTxWrapper{tx}, nil
+}
+
+// sqlTxWrapper wraps *sql.Tx to satisfy the Tx interface.
+type sqlTxWrapper struct {
+	*sql.Tx
+}
+
+func (w *sqlTxWrapper) QueryRowContext(ctx context.Context, query string, args ...any) Row {
+	return w.Tx.QueryRowContext(ctx, query, args...)
+}
+
+func (w *sqlTxWrapper) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
+	return nil, errors.New("nested transactions not supported")
+}
+
 type Repository struct {
-	db *sql.DB
+	db DB
 }
 
 func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db}
+	return &Repository{db: &sqlDBWrapper{db}}
 }
 
 func (r *Repository) CreateAccount(ctx context.Context, name string, accType AccountType, currency string, userID *string) (*Account, error) {
@@ -150,23 +200,23 @@ func (r *Repository) RecordTransaction(ctx context.Context, req TransactionReque
 		}
 	}
 
+	// For testing, we need to handle BeginTx returning a Tx interface.
+	// Since sql.DB.BeginTx returns *sql.Tx, we need a way to bridge this.
+	// We'll assume the implementation of DB.BeginTx handles this abstraction.
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Printf("Failed to rollback transaction: %v", err)
+		// Use a type assertion or interface check for Rollback
+		if r, ok := any(tx).(interface{ Rollback() error }); ok {
+			if err := r.Rollback(); err != nil && err != sql.ErrTxDone {
+				log.Printf("Failed to rollback transaction: %v", err)
+			}
 		}
 	}()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Printf("Failed to rollback transaction: %v", err)
-		}
-	}()
+
 	// 2. Check for existing transaction (Idempotency)
 	var existingID string
 	err = tx.QueryRowContext(ctx, `SELECT id FROM transactions WHERE reference_id = $1`, req.ReferenceID).Scan(&existingID)
