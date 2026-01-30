@@ -3,100 +3,126 @@ package ledger
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 )
 
-// MockRow implements the Row interface for testing.
-type MockRow struct {
-	ScanFunc func(dest ...any) error
-}
-
-func (m *MockRow) Scan(dest ...any) error {
-	return m.ScanFunc(dest...)
-}
-
-// MockTx implements the Tx interface for testing.
-type MockTx struct {
-	QueryRowContextFunc func(ctx context.Context, query string, args ...any) Row
-	ExecContextFunc     func(ctx context.Context, query string, args ...any) (sql.Result, error)
-	QueryContextFunc    func(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	BeginTxFunc         func(ctx context.Context, opts *sql.TxOptions) (Tx, error)
-	CommitFunc          func() error
-	RollbackFunc        func() error
-}
-
-func (m *MockTx) QueryRowContext(ctx context.Context, query string, args ...any) Row {
-	return m.QueryRowContextFunc(ctx, query, args...)
-}
-func (m *MockTx) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return m.ExecContextFunc(ctx, query, args...)
-}
-func (m *MockTx) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return m.QueryContextFunc(ctx, query, args...)
-}
-func (m *MockTx) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
-	return m.BeginTxFunc(ctx, opts)
-}
-func (m *MockTx) Commit() error   { return m.CommitFunc() }
-func (m *MockTx) Rollback() error { return m.RollbackFunc() }
-
-// MockDB implements the DB interface for testing.
-type MockDB struct {
-	QueryRowContextFunc func(ctx context.Context, query string, args ...any) Row
-	ExecContextFunc     func(ctx context.Context, query string, args ...any) (sql.Result, error)
-	QueryContextFunc    func(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	BeginTxFunc         func(ctx context.Context, opts *sql.TxOptions) (Tx, error)
-}
-
-func (m *MockDB) QueryRowContext(ctx context.Context, query string, args ...any) Row {
-	return m.QueryRowContextFunc(ctx, query, args...)
-}
-func (m *MockDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return m.ExecContextFunc(ctx, query, args...)
-}
-func (m *MockDB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return m.QueryContextFunc(ctx, query, args...)
-}
-func (m *MockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
-	return m.BeginTxFunc(ctx, opts)
-}
-
-func TestRecordTransaction_Validation(t *testing.T) {
-	repo := &Repository{db: &MockDB{}}
-
-	t.Run("UnbalancedTransaction", func(t *testing.T) {
-		req := TransactionRequest{
-			Entries: []EntryRequest{
-				{Amount: 100},
-				{Amount: -50},
+func TestRecordTransaction_TableDriven(t *testing.T) {
+	tests := []struct {
+		name        string
+		req         TransactionRequest
+		mockSetup   func(*MockDB)
+		expectedErr string
+	}{
+		{
+			name: "Unbalanced Transaction",
+			req: TransactionRequest{
+				Entries: []EntryRequest{
+					{Amount: 100},
+					{Amount: -50},
+				},
 			},
-		}
-		err := repo.RecordTransaction(context.Background(), req)
-		if err == nil || err.Error() != "transaction is not balanced (sum != 0)" {
-			t.Errorf("Expected unbalanced error, got %v", err)
-		}
-	})
-}
-
-func TestCreateAccount(t *testing.T) {
-	mockDB := &MockDB{}
-	repo := &Repository{db: mockDB}
-
-	mockDB.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) Row {
-		return &MockRow{
-			ScanFunc: func(dest ...any) error {
-				// ID is at index 0, CreatedAt at index 1
-				*(dest[0].(*string)) = "acc_123"
-				return nil
+			mockSetup:   func(m *MockDB) {},
+			expectedErr: "transaction is not balanced (sum != 0)",
+		},
+		{
+			name: "Account Not Found",
+			req: TransactionRequest{
+				Entries: []EntryRequest{
+					{AccountID: "acc_1", Amount: 100},
+					{AccountID: "acc_2", Amount: -100},
+				},
 			},
-		}
+			mockSetup: func(m *MockDB) {
+				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) Row {
+					return &MockRow{
+						ScanFunc: func(dest ...any) error {
+							return sql.ErrNoRows
+						},
+					}
+				}
+			},
+			expectedErr: "account acc_1 not found",
+		},
+		// Add more cases here (Currency mismatch, Idempotency, etc)
 	}
 
-	acc, err := repo.CreateAccount(context.Background(), "Test", Asset, "USD", nil)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &MockDB{}
+			tt.mockSetup(mockDB)
+			repo := &Repository{db: mockDB}
+
+			err := repo.RecordTransaction(context.Background(), tt.req)
+			if tt.expectedErr != "" {
+				if err == nil || err.Error() != tt.expectedErr {
+					t.Errorf("Expected error '%s', got '%v'", tt.expectedErr, err)
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
 	}
-	if acc.ID != "acc_123" {
-		t.Errorf("Expected ID acc_123, got %s", acc.ID)
+}
+
+func TestCreateAccount_TableDriven(t *testing.T) {
+	tests := []struct {
+		name        string
+		accName     string
+		mockSetup   func(*MockDB)
+		expectedID  string
+		expectedErr bool
+	}{
+		{
+			name:    "Success",
+			accName: "Checking",
+			mockSetup: func(m *MockDB) {
+				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) Row {
+					return &MockRow{
+						ScanFunc: func(dest ...any) error {
+							*(dest[0].(*string)) = "acc_123"
+							return nil
+						},
+					}
+				}
+			},
+			expectedID: "acc_123",
+		},
+		{
+			name:    "Database Error",
+			accName: "Savings",
+			mockSetup: func(m *MockDB) {
+				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) Row {
+					return &MockRow{
+						ScanFunc: func(dest ...any) error {
+							return errors.New("db error")
+						},
+					}
+				}
+			},
+			expectedErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &MockDB{}
+			tt.mockSetup(mockDB)
+			repo := &Repository{db: mockDB}
+
+			acc, err := repo.CreateAccount(context.Background(), tt.accName, Asset, "USD", nil)
+			if tt.expectedErr {
+				if err == nil {
+					t.Error("Expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if acc.ID != tt.expectedID {
+				t.Errorf("Expected ID %s, got %s", tt.expectedID, acc.ID)
+			}
+		})
 	}
 }

@@ -112,6 +112,11 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: &sqlDBWrapper{db}}
 }
 
+// NewTestRepository creates a repository with a custom DB interface for testing.
+func NewTestRepository(db DB) *Repository {
+	return &Repository{db: db}
+}
+
 func (r *Repository) CreateAccount(ctx context.Context, name string, accType AccountType, currency string, userID *string) (*Account, error) {
 	acc := &Account{
 		Name:     name,

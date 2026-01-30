@@ -51,6 +51,11 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: &sqlDBWrapper{db}}
 }
 
+// NewTestRepository creates a repository with a custom DB interface for testing.
+func NewTestRepository(db DB) *Repository {
+	return &Repository{db: db}
+}
+
 // CreatePaymentIntent inserts a new payment intent.
 func (r *Repository) CreatePaymentIntent(ctx context.Context, intent *PaymentIntent) error {
 	if intent.Currency == "" {

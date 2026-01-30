@@ -36,6 +36,11 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: &sqlDBWrapper{db}}
 }
 
+// NewTestRepository creates a repository with a custom DB interface for testing.
+func NewTestRepository(db DB) *Repository {
+	return &Repository{db: db}
+}
+
 // CreateUser inserts a new user into the database and returns the created user.
 func (r *Repository) CreateUser(ctx context.Context, email, passwordHash string) (*User, error) {
 	var user User

@@ -26,7 +26,7 @@ Provide **developer-first, scalable, open-source financial infrastructure** that
 
 ### 🛠 Reliability & Testing
 - [x] **Unit Tests for Services** — Achieve high coverage for `internal/` (payment, ledger, auth). Focus on core business logic.
-- [ ] **Table-Driven Tests** — Implement Go table-driven tests for all handlers and domain logic to cover edge cases efficiently.
+- [x] **Table-Driven Tests** — Implement Go table-driven tests for all handlers and domain logic to cover edge cases efficiently.
 - [x] **Mock Interfaces** — Extract interfaces for repositories and external clients (Redis, Kafka) to allow robust unit testing without dependencies.
 - [ ] **Idempotency Keys** — Implement `Idempotency-Key` support for payment creation and confirmation to handle retries safely.
 
