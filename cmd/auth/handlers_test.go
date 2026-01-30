@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/marwan562/fintech-ecosystem/internal/auth"
 )
 
@@ -26,10 +28,11 @@ func TestAuthHandler_Login(t *testing.T) {
 					return &auth.MockRow{
 						ScanFunc: func(dest ...any) error {
 							if strings.Contains(query, "SELECT id, email, password_hash") {
-								// password_hash for "password123"
+								// generate a real bcrypt hash for "password123"
+								hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.MinCost)
 								*(dest[0].(*string)) = "user_123"
 								*(dest[1].(*string)) = "test@example.com"
-								*(dest[2].(*string)) = "$2a$10$8K1p/a06gr71Z6S.p.8.9eS6l.T7.P/.k1e0k2O2.Y2.Y2.Y2.Y2"
+								*(dest[2].(*string)) = string(hash)
 								return nil
 							}
 							return nil
