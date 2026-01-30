@@ -26,10 +26,10 @@ func TestAuthHandler_Login(t *testing.T) {
 					return &auth.MockRow{
 						ScanFunc: func(dest ...any) error {
 							if strings.Contains(query, "SELECT id, email, password_hash") {
-								// password_hash for "password123" (mocked check)
+								// password_hash for "password123"
 								*(dest[0].(*string)) = "user_123"
 								*(dest[1].(*string)) = "test@example.com"
-								*(dest[2].(*string)) = "$2a$10$something" // bcrypt hash
+								*(dest[2].(*string)) = "$2a$10$8K1p/a06gr71Z6S.p.8.9eS6l.T7.P/.k1e0k2O2.Y2.Y2.Y2.Y2"
 								return nil
 							}
 							return nil
@@ -87,6 +87,7 @@ func TestAuthHandler_Register(t *testing.T) {
 					return &auth.MockRow{
 						ScanFunc: func(dest ...any) error {
 							*(dest[0].(*string)) = "user_456"
+							*(dest[1].(*string)) = "new@example.com"
 							return nil
 						},
 					}

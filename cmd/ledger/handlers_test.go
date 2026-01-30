@@ -12,10 +12,6 @@ import (
 )
 
 // MockDB for handler tests
-type mockDB struct {
-	ledger.MockDB
-}
-
 func TestLedgerHandler_CreateAccount(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -54,12 +50,12 @@ func TestLedgerHandler_CreateAccount(t *testing.T) {
 				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) ledger.Row {
 					return &ledger.MockRow{
 						ScanFunc: func(dest ...any) error {
-							return errors.New("scan error")
+							return errors.New("db error")
 						},
 					}
 				}
 			},
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusBadRequest, // WriteErrorJSON defaults to 400
 			expectedBody:   "Failed to create account",
 		},
 	}
