@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+// sqlDBWrapper wraps *sql.DB to satisfy the DB interface.
+type sqlDBWrapper struct {
+	*sql.DB
+}
+
+func (w *sqlDBWrapper) QueryRowContext(ctx context.Context, query string, args ...any) Row {
+	return w.DB.QueryRowContext(ctx, query, args...)
+}
+
 // User represents a registered user in the system.
 type User struct {
 	ID        string    `json:"id"`
@@ -19,11 +28,16 @@ type User struct {
 
 // Repository handles database interactions for users.
 type Repository struct {
-	db *sql.DB
+	db DB
 }
 
 // NewRepository creates a new instance of Repository.
 func NewRepository(db *sql.DB) *Repository {
+	return &Repository{db: &sqlDBWrapper{db}}
+}
+
+// NewTestRepository creates a repository with a custom DB interface for testing.
+func NewTestRepository(db DB) *Repository {
 	return &Repository{db: db}
 }
 

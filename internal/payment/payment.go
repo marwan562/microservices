@@ -8,6 +8,26 @@ import (
 	"time"
 )
 
+// DB defines an interface for database operations.
+type DB interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// Row defines an interface for sql.Row.
+type Row interface {
+	Scan(dest ...any) error
+}
+
+// sqlDBWrapper wraps *sql.DB to satisfy the DB interface.
+type sqlDBWrapper struct {
+	*sql.DB
+}
+
+func (w *sqlDBWrapper) QueryRowContext(ctx context.Context, query string, args ...any) Row {
+	return w.DB.QueryRowContext(ctx, query, args...)
+}
+
 // PaymentIntent represents a payment transaction intent.
 type PaymentIntent struct {
 	ID                   string    `json:"id"`
@@ -23,11 +43,16 @@ type PaymentIntent struct {
 
 // Repository handles database interactions for payments.
 type Repository struct {
-	db *sql.DB
+	db DB
 }
 
 // NewRepository creates a new instance of Repository.
 func NewRepository(db *sql.DB) *Repository {
+	return &Repository{db: &sqlDBWrapper{db}}
+}
+
+// NewTestRepository creates a repository with a custom DB interface for testing.
+func NewTestRepository(db DB) *Repository {
 	return &Repository{db: db}
 }
 

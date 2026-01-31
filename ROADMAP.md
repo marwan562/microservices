@@ -25,9 +25,9 @@ Provide **developer-first, scalable, open-source financial infrastructure** that
 *Goal: Trust and maintainability. Ensure the platform is safe for production use and easy for contributors to join.*
 
 ### 🛠 Reliability & Testing
-- [ ] **Unit Tests for Services** — Achieve high coverage for `internal/` (payment, ledger, auth). Focus on core business logic.
-- [ ] **Table-Driven Tests** — Implement Go table-driven tests for all handlers and domain logic to cover edge cases efficiently.
-- [ ] **Mock Interfaces** — Extract interfaces for repositories and external clients (Redis, Kafka) to allow robust unit testing without dependencies.
+- [x] **Unit Tests for Services** — Achieve high coverage for `internal/` (payment, ledger, auth). Focus on core business logic.
+- [x] **Table-Driven Tests** — Implement Go table-driven tests for all handlers and domain logic to cover edge cases efficiently.
+- [x] **Mock Interfaces** — Extract interfaces for repositories and external clients (Redis, Kafka) to allow robust unit testing without dependencies.
 - [ ] **Idempotency Keys** — Implement `Idempotency-Key` support for payment creation and confirmation to handle retries safely.
 
 ### 🏗 Architecture & Integrity
