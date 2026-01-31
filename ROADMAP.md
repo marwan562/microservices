@@ -54,8 +54,8 @@ Provide **developer-first, scalable, open-source financial infrastructure** that
 *Goal: Sustainable open source through optional commercial offerings.*
 
 ### ☁️ Managed Offerings
-- [ ] **Hosted Version (Fintech Cloud)** — Offer a managed deployment path where we handle infrastructure, security, and updates.
-- [ ] **Enterprise Compliance** — SOC2/PCI-DSS compliance documentation and hardened security controls for the hosted tier.
+- [x] **Hosted Version (Fintech Cloud)** — Offer a managed deployment path where we handle infrastructure, security, and updates.
+- [x] **Enterprise Compliance** — SOC2/PCI-DSS compliance documentation and hardened security controls for the hosted tier.
 
 ### 💼 Commercial Support
 - [ ] **Paid Support & SLAs** — Offer tiered support packages for companies requiring guaranteed uptime and priority bugfixes.
