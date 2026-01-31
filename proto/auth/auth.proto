@@ -84,6 +84,7 @@ message ValidateKeyResponse {
   string scopes = 4;
   string org_id = 5;
   string role = 6;
+  int32 rate_limit_quota = 7;
 }
 
 message ValidateTokenRequest {

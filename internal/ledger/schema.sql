@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     type VARCHAR(50) NOT NULL, -- asset, liability, equity, revenue, expense
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     user_id UUID, -- Optional link to auth user
+    org_id UUID NOT NULL,  -- For multi-tenancy
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -66,5 +67,6 @@ BEFORE UPDATE OR DELETE ON outbox
 FOR EACH ROW EXECUTE FUNCTION prevent_outbox_mutation();
 
 CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_org_id ON accounts(org_id);
 CREATE INDEX IF NOT EXISTS idx_entries_transaction_id ON entries(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_entries_account_id ON entries(account_id);

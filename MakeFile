@@ -6,6 +6,7 @@ build:
 	go build -o bin/payments ./cmd/payments
 	go build -o bin/ledger ./cmd/ledger
 	go build -o bin/gateway ./cmd/gateway
+	go build -o bin/billing ./cmd/billing
 	go build -o bin/notifications ./cmd/notifications
 	go build -o bin/micro ./cmd/cli
 
@@ -65,6 +66,10 @@ proto:
 	protoc -I. -I./third_party --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		proto/fraud/fraud.proto
+	mkdir -p proto/billing
+	protoc -I. -I./third_party --go_out=. --go_opt=paths=source_relative \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		proto/billing/billing.proto
 
 # Set up git hooks
 setup-hooks:

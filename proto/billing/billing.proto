@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package billing;
+
+option go_package = "github.com/marwan562/fintech-ecosystem/proto/billing";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service BillingService {
+  rpc CreateSubscription(CreateSubscriptionRequest) returns (Subscription) {
+    option (google.api.http) = {
+      post: "/v1/billing/subscriptions"
+      body: "*"
+    };
+  }
+
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (Subscription) {
+    option (google.api.http) = {
+      post: "/v1/billing/subscriptions/{id}/cancel"
+      body: "*"
+    };
+  }
+
+  rpc GetSubscription(GetSubscriptionRequest) returns (Subscription) {
+    option (google.api.http) = {
+      get: "/v1/billing/subscriptions/{id}"
+    };
+  }
+
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/billing/subscriptions"
+    };
+  }
+}
+
+message Subscription {
+  string id = 1;
+  string user_id = 2;
+  string org_id = 3;
+  string plan_id = 4;
+  string status = 5;
+  google.protobuf.Timestamp current_period_start = 6;
+  google.protobuf.Timestamp current_period_end = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp canceled_at = 9;
+}
+
+message CreateSubscriptionRequest {
+  string user_id = 1;
+  string org_id = 2;
+  string plan_id = 3;
+}
+
+message CancelSubscriptionRequest {
+  string id = 1;
+}
+
+message GetSubscriptionRequest {
+  string id = 1;
+}
+
+message ListSubscriptionsRequest {
+  string user_id = 1;
+  string org_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListSubscriptionsResponse {
+  repeated Subscription subscriptions = 1;
+  int32 total_count = 2;
+}

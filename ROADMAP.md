@@ -45,8 +45,8 @@ Provide **developer-first, scalable, open-source financial infrastructure** that
 - [x] **Wallets as a First-Class Primitive** — Add dedicated APIs for wallet management (top-ups, transfers), still backed by the ledger.
 
 ### 📈 Features & Scale
-- [ ] **Subscriptions & Billing** — Build recurring payment logic on top of the existing payment and ledger primitives.
-- [ ] **Multi-tenancy & Rate Limiting** — Add tenant isolation and per-API-key quotas to support managed hosting environments.
+- [x] **Subscriptions & Billing** — Build recurring payment logic on top of the existing payment and ledger primitives.
+- [x] **Multi-tenancy & Rate Limiting** — Add tenant isolation and per-API-key quotas to support managed hosting environments.
 
 ---
 

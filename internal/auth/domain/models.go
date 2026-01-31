@@ -16,10 +16,11 @@ type User struct {
 
 // Organization represents a team or company.
 type Organization struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Domain    string    `json:"domain,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Domain         string    `json:"domain,omitempty"`
+	RateLimitQuota int       `json:"rate_limit_quota"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // Membership represents a user's role in an organization.
@@ -32,16 +33,17 @@ type Membership struct {
 
 // APIKey represents a secret key used for API authentication.
 type APIKey struct {
-	ID           string     `json:"id"`
-	UserID       string     `json:"user_id"`
-	OrgID        string     `json:"org_id,omitempty"`
-	KeyPrefix    string     `json:"key_prefix"`
-	KeyHash      string     `json:"-"`
-	TruncatedKey string     `json:"truncated_key"`
-	Environment  string     `json:"environment"`
-	Scopes       string     `json:"scopes"` // Space-separated scopes, "*" for all
-	CreatedAt    time.Time  `json:"created_at"`
-	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
+	ID             string     `json:"id"`
+	UserID         string     `json:"user_id"`
+	OrgID          string     `json:"org_id,omitempty"`
+	KeyPrefix      string     `json:"key_prefix"`
+	KeyHash        string     `json:"-"`
+	TruncatedKey   string     `json:"truncated_key"`
+	Environment    string     `json:"environment"`
+	Scopes         string     `json:"scopes"`           // Space-separated scopes, "*" for all
+	RateLimitQuota int        `json:"rate_limit_quota"` // Per minute, overrides Org quota if > 0
+	CreatedAt      time.Time  `json:"created_at"`
+	RevokedAt      *time.Time `json:"revoked_at,omitempty"`
 }
 
 // OAuthClient represents a registered OAuth client application.

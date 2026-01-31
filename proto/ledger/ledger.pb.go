@@ -7,6 +7,7 @@
 package ledger
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -266,7 +267,7 @@ var File_proto_ledger_ledger_proto protoreflect.FileDescriptor
 
 const file_proto_ledger_ledger_proto_rawDesc = "" +
 	"\n" +
-	"\x19proto/ledger/ledger.proto\x12\x06ledger\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb2\x01\n" +
+	"\x19proto/ledger/ledger.proto\x12\x06ledger\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\"\xb2\x01\n" +
 	"\x18RecordTransactionRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x16\n" +
@@ -286,11 +287,11 @@ const file_proto_ledger_ledger_proto_rawDesc = "" +
 	"\abalance\x18\x02 \x01(\x03R\abalance\x12\x1a\n" +
 	"\bcurrency\x18\x03 \x01(\tR\bcurrency\x129\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xae\x01\n" +
-	"\rLedgerService\x12X\n" +
-	"\x11RecordTransaction\x12 .ledger.RecordTransactionRequest\x1a!.ledger.RecordTransactionResponse\x12C\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xfc\x01\n" +
+	"\rLedgerService\x12|\n" +
+	"\x11RecordTransaction\x12 .ledger.RecordTransactionRequest\x1a!.ledger.RecordTransactionResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/ledger/transactions\x12m\n" +
 	"\n" +
-	"GetAccount\x12\x19.ledger.GetAccountRequest\x1a\x1a.ledger.GetAccountResponseB5Z3github.com/marwan562/fintech-ecosystem/proto/ledgerb\x06proto3"
+	"GetAccount\x12\x19.ledger.GetAccountRequest\x1a\x1a.ledger.GetAccountResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/ledger/accounts/{account_id}B5Z3github.com/marwan562/fintech-ecosystem/proto/ledgerb\x06proto3"
 
 var (
 	file_proto_ledger_ledger_proto_rawDescOnce sync.Once

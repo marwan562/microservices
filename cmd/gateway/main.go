@@ -67,21 +67,21 @@ func NewGatewayHandler(auth, payment, ledger, wallet string, rdb *redis.Client, 
 }
 
 // validateKeyWithAuthService calls the Auth service to validate the API key hash.
-func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, string, string, bool) {
+func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, string, string, int32, bool) {
 	res, err := h.authClient.ValidateKey(ctx, &pb.ValidateKeyRequest{KeyHash: keyHash})
 	if err != nil {
 		log.Printf("Auth service gRPC validation call failed: %v", err)
-		return "", "", "", "", "", false
+		return "", "", "", "", "", 0, false
 	}
 
-	return res.UserId, res.Environment, res.Scopes, res.OrgId, res.Role, res.Valid
+	return res.UserId, res.Environment, res.Scopes, res.OrgId, res.Role, res.RateLimitQuota, res.Valid
 }
 
-// checkRateLimit checks if the key has exceeded 100 req/min.
-func (h *GatewayHandler) checkRateLimit(ctx context.Context, keyHash string) (bool, error) {
-	// Simple fixed window for demonstration, user asked for sliding window or similar.
-	// Let's use a simple counter with expiration for the minute.
-	// Key: rate_limit:{key_hash}:{minute_timestamp}
+// checkRateLimit checks if the key has exceeded its quota.
+func (h *GatewayHandler) checkRateLimit(ctx context.Context, keyHash string, quota int32) (bool, error) {
+	if quota <= 0 {
+		quota = 100 // Default fallback
+	}
 	window := time.Now().Unix() / 60
 	redisKey := fmt.Sprintf("rate_limit:%s:%d", keyHash, window)
 
@@ -94,7 +94,7 @@ func (h *GatewayHandler) checkRateLimit(ctx context.Context, keyHash string) (bo
 		h.rdb.Expire(ctx, redisKey, 60*time.Second)
 	}
 
-	return count <= 100, nil
+	return count <= int64(quota), nil
 }
 
 // proxyRequest creates a reverse proxy to the target URL and serves the request.
@@ -156,7 +156,7 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	keyHash := apikey.HashKey(apiKey, h.hmacSecret)
 
 	// Validate with Auth Service
-	userID, env, keyScopes, orgID, role, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
+	userID, env, keyScopes, orgID, role, quota, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
 	if !valid {
 		jsonutil.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid or revoked API Key"})
 		return
@@ -173,7 +173,7 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Rate Limiting
-	allowed, err := h.checkRateLimit(r.Context(), keyHash)
+	allowed, err := h.checkRateLimit(r.Context(), keyHash, quota)
 	if err != nil {
 		log.Printf("Redis error: %v", err)
 		// Fail open or closed? Closed for security.
