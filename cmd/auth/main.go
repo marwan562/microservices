@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/marwan562/fintech-ecosystem/internal/auth"
+	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
+	"github.com/marwan562/fintech-ecosystem/internal/auth/infrastructure"
 	"github.com/marwan562/fintech-ecosystem/pkg/database"
 	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
-	"github.com/marwan562/fintech-ecosystem/pkg/observability" // NEW
+	"github.com/marwan562/fintech-ecosystem/pkg/observability"
 	pb "github.com/marwan562/fintech-ecosystem/proto/auth"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp" // NEW
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/marwan562/fintech-ecosystem/pkg/monitoring"
 	"google.golang.org/grpc"
@@ -50,8 +51,10 @@ func main() {
 		log.Println("Warning: API_KEY_HMAC_SECRET not set, using default for dev")
 	}
 
-	repo := auth.NewRepository(db)
-	handler := &AuthHandler{repo: repo, hmacSecret: hmacSecret}
+	sqlRepo := infrastructure.NewSQLRepository(db)
+	authService := domain.NewAuthService(sqlRepo)
+
+	handler := &AuthHandler{service: authService, hmacSecret: hmacSecret}
 
 	// Initialize Tracer
 	shutdown, err := observability.InitTracer(context.Background(), observability.Config{
@@ -116,7 +119,7 @@ func main() {
 		log.Fatalf("failed to listen for gRPC: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterAuthServiceServer(s, NewAuthGRPCServer(repo))
+	pb.RegisterAuthServiceServer(s, NewAuthGRPCServer(authService))
 
 	log.Println("Auth service gRPC starting on :50051")
 	if err := s.Serve(lis); err != nil {

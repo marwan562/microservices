@@ -8,29 +8,24 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/marwan562/fintech-ecosystem/internal/ledger"
+	"github.com/marwan562/fintech-ecosystem/internal/ledger/domain"
 )
 
-// MockDB for handler tests
 func TestLedgerHandler_CreateAccount(t *testing.T) {
 	tests := []struct {
 		name           string
 		reqBody        string
-		mockSetup      func(*ledger.MockDB)
+		mockSetup      func(*domain.MockRepository)
 		expectedStatus int
 		expectedBody   string
 	}{
 		{
 			name:    "Valid Request",
 			reqBody: `{"name":"Checking","type":"asset","currency":"USD"}`,
-			mockSetup: func(m *ledger.MockDB) {
-				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) ledger.Row {
-					return &ledger.MockRow{
-						ScanFunc: func(dest ...any) error {
-							*(dest[0].(*string)) = "acc_123"
-							return nil
-						},
-					}
+			mockSetup: func(m *domain.MockRepository) {
+				m.CreateAccountFunc = func(ctx context.Context, acc *domain.Account) error {
+					acc.ID = "acc_123"
+					return nil
 				}
 			},
 			expectedStatus: http.StatusCreated,
@@ -39,20 +34,16 @@ func TestLedgerHandler_CreateAccount(t *testing.T) {
 		{
 			name:           "Missing Name",
 			reqBody:        `{"type":"asset"}`,
-			mockSetup:      func(m *ledger.MockDB) {},
+			mockSetup:      func(m *domain.MockRepository) {},
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "Name and Type are required",
 		},
 		{
 			name:    "Repo Error",
 			reqBody: `{"name":"Checking","type":"asset"}`,
-			mockSetup: func(m *ledger.MockDB) {
-				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) ledger.Row {
-					return &ledger.MockRow{
-						ScanFunc: func(dest ...any) error {
-							return errors.New("db error")
-						},
-					}
+			mockSetup: func(m *domain.MockRepository) {
+				m.CreateAccountFunc = func(ctx context.Context, acc *domain.Account) error {
+					return errors.New("db error")
 				}
 			},
 			expectedStatus: http.StatusBadRequest, // WriteErrorJSON defaults to 400
@@ -62,10 +53,10 @@ func TestLedgerHandler_CreateAccount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mDB := &ledger.MockDB{}
-			tt.mockSetup(mDB)
-			repo := ledger.NewTestRepository(mDB)
-			h := &LedgerHandler{repo: repo}
+			mRepo := &domain.MockRepository{}
+			tt.mockSetup(mRepo)
+			service := domain.NewLedgerService(mRepo, nil)
+			h := &LedgerHandler{service: service}
 
 			req := httptest.NewRequest("POST", "/accounts", strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
@@ -105,8 +96,8 @@ func TestLedgerHandler_RecordTransaction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &ledger.Repository{} // Empty repo is fine for validation-only tests
-			h := &LedgerHandler{repo: repo}
+			service := domain.NewLedgerService(&domain.MockRepository{}, nil)
+			h := &LedgerHandler{service: service}
 
 			req := httptest.NewRequest("POST", "/transactions", strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()

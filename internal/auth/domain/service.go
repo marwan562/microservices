@@ -1,0 +1,197 @@
+package domain
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
+	"time"
+)
+
+type AuthService struct {
+	repo Repository
+}
+
+func NewAuthService(repo Repository) *AuthService {
+	return &AuthService{repo: repo}
+}
+
+// User methods
+
+func (s *AuthService) CreateUser(ctx context.Context, email, passwordHash string) (*User, error) {
+	return s.repo.CreateUser(ctx, email, passwordHash)
+}
+
+func (s *AuthService) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	return s.repo.GetUserByEmail(ctx, email)
+}
+
+func (s *AuthService) GetUserByID(ctx context.Context, id string) (*User, error) {
+	return s.repo.GetUserByID(ctx, id)
+}
+
+func (s *AuthService) GetUserByExternalID(ctx context.Context, provider, providerUserID string) (*User, error) {
+	return s.repo.GetUserByExternalID(ctx, provider, providerUserID)
+}
+
+func (s *AuthService) LinkExternalIdentity(ctx context.Context, userID, provider, providerUserID string) error {
+	return s.repo.LinkExternalIdentity(ctx, userID, provider, providerUserID)
+}
+
+// Organization methods
+
+func (s *AuthService) CreateOrganization(ctx context.Context, name, domain string) (*Organization, error) {
+	return s.repo.CreateOrganization(ctx, name, domain)
+}
+
+func (s *AuthService) GetOrganization(ctx context.Context, id string) (*Organization, error) {
+	return s.repo.GetOrganization(ctx, id)
+}
+
+func (s *AuthService) AddMember(ctx context.Context, userID, orgID, role string) error {
+	return s.repo.AddMember(ctx, userID, orgID, role)
+}
+
+func (s *AuthService) RemoveMember(ctx context.Context, userID, orgID string) error {
+	return s.repo.RemoveMember(ctx, userID, orgID)
+}
+
+func (s *AuthService) UpdateMemberRole(ctx context.Context, userID, orgID, role string) error {
+	return s.repo.UpdateMemberRole(ctx, userID, orgID, role)
+}
+
+func (s *AuthService) ListOrgMembers(ctx context.Context, orgID string) ([]Membership, error) {
+	return s.repo.ListOrgMembers(ctx, orgID)
+}
+
+func (s *AuthService) GetUserMemberships(ctx context.Context, userID string) ([]Membership, error) {
+	return s.repo.GetUserMemberships(ctx, userID)
+}
+
+func (s *AuthService) HasPermission(ctx context.Context, userID, orgID, requiredRole string) (bool, error) {
+	m, err := s.repo.GetMembership(ctx, userID, orgID)
+	if err != nil {
+		return false, err
+	}
+	if m == nil {
+		return false, nil
+	}
+
+	roles := map[string]int{
+		RoleOwner:     4,
+		RoleAdmin:     3,
+		RoleDeveloper: 2,
+		RoleMember:    1,
+	}
+
+	return roles[m.Role] >= roles[requiredRole], nil
+}
+
+// APIKey methods
+
+func (s *AuthService) CreateAPIKey(ctx context.Context, key *APIKey) error {
+	return s.repo.CreateAPIKey(ctx, key)
+}
+
+func (s *AuthService) GetAPIKeyByHash(ctx context.Context, hash string) (*APIKey, error) {
+	return s.repo.GetAPIKeyByHash(ctx, hash)
+}
+
+// OAuth methods
+
+func (s *AuthService) GetClientByID(ctx context.Context, clientID string) (*OAuthClient, error) {
+	return s.repo.GetClientByID(ctx, clientID)
+}
+
+func (s *AuthService) CreateOAuthClient(ctx context.Context, client *OAuthClient) error {
+	return s.repo.CreateOAuthClient(ctx, client)
+}
+
+func (s *AuthService) AddRedirectURI(ctx context.Context, clientID, redirectURI string) error {
+	return s.repo.AddRedirectURI(ctx, clientID, redirectURI)
+}
+
+func (s *AuthService) ValidateRedirectURI(ctx context.Context, clientID, redirectURI string) (bool, error) {
+	return s.repo.ValidateRedirectURI(ctx, clientID, redirectURI)
+}
+
+func (s *AuthService) CreateOAuthToken(ctx context.Context, token *OAuthToken) error {
+	return s.repo.CreateOAuthToken(ctx, token)
+}
+
+func (s *AuthService) ValidateOAuthToken(ctx context.Context, accessToken string) (*OAuthToken, error) {
+	token, err := s.repo.ValidateOAuthToken(ctx, accessToken)
+	if err != nil {
+		return nil, err
+	}
+	if token == nil {
+		return nil, nil
+	}
+	if time.Now().After(token.ExpiresAt) {
+		return nil, fmt.Errorf("token expired")
+	}
+	return token, nil
+}
+
+func (s *AuthService) CreateAuthorizationCode(ctx context.Context, code *AuthorizationCode) error {
+	return s.repo.CreateAuthorizationCode(ctx, code)
+}
+
+func (s *AuthService) GetAuthorizationCode(ctx context.Context, code string) (*AuthorizationCode, error) {
+	return s.repo.GetAuthorizationCode(ctx, code)
+}
+
+func (s *AuthService) MarkAuthorizationCodeUsed(ctx context.Context, code string) error {
+	return s.repo.MarkAuthorizationCodeUsed(ctx, code)
+}
+
+// SSO Provider methods
+
+func (s *AuthService) CreateSSOProvider(ctx context.Context, p *SSOProvider) error {
+	return s.repo.CreateSSOProvider(ctx, p)
+}
+
+func (s *AuthService) GetSSOProviderByID(ctx context.Context, id string) (*SSOProvider, error) {
+	return s.repo.GetSSOProviderByID(ctx, id)
+}
+
+func (s *AuthService) GetSSOProviderByDomain(ctx context.Context, domain string) (*SSOProvider, error) {
+	return s.repo.GetSSOProviderByDomain(ctx, domain)
+}
+
+// Audit Log methods
+
+func (s *AuthService) CreateAuditLog(ctx context.Context, log *AuditLog) error {
+	return s.repo.CreateAuditLog(ctx, log)
+}
+
+func (s *AuthService) GetAuditLogs(ctx context.Context, orgID string, limit, offset int, action string) ([]AuditLog, int, error) {
+	return s.repo.GetAuditLogs(ctx, orgID, limit, offset, action)
+}
+
+// Helper methods (Domain Logic)
+
+func (s *AuthService) GenerateRandomString(n int) (string, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+func (s *AuthService) HashString(str string) string {
+	hash := sha256.Sum256([]byte(str))
+	return fmt.Sprintf("%x", hash)
+}
+
+func (s *AuthService) VerifyCodeChallenge(codeVerifier, codeChallenge, method string) bool {
+	if method == "S256" {
+		hash := sha256.Sum256([]byte(codeVerifier))
+		challenge := base64.RawURLEncoding.EncodeToString(hash[:])
+		return challenge == codeChallenge
+	}
+	// Default to plain
+	return codeVerifier == codeChallenge
+}

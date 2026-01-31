@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/payment"
+	"github.com/marwan562/fintech-ecosystem/internal/payment/domain"
+	"github.com/marwan562/fintech-ecosystem/internal/payment/infrastructure"
 	"github.com/marwan562/fintech-ecosystem/pkg/bank"
 	"github.com/marwan562/fintech-ecosystem/pkg/database"
 	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
@@ -63,7 +64,8 @@ func main() {
 	}
 
 	// Initialize dependencies
-	repo := payment.NewRepository(db)
+	repo := infrastructure.NewSQLRepository(db)
+	service := domain.NewPaymentService(repo)
 	bankClient := bank.NewMockClient()
 
 	// Setup Ledger Service gRPC Client
@@ -137,7 +139,7 @@ func main() {
 	monitoring.StartMetricsServer(":8086") // Distinct from HTTP server on 8082 if preferred, but on separate port is standard
 
 	handler := &PaymentHandler{
-		repo:          repo,
+		service:       service,
 		bankClient:    bankClient,
 		rdb:           rdb,
 		ledgerClient:  ledgerClient,

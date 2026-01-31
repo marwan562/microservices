@@ -1,4 +1,4 @@
-package payment
+package infrastructure
 
 import (
 	"github.com/prometheus/client_golang/prometheus"

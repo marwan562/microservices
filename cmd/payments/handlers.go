@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/marwan562/fintech-ecosystem/internal/payment"
+	"github.com/marwan562/fintech-ecosystem/internal/payment/domain"
+	"github.com/marwan562/fintech-ecosystem/internal/payment/infrastructure"
 	"github.com/marwan562/fintech-ecosystem/pkg/audit"
 	"github.com/marwan562/fintech-ecosystem/pkg/bank"
 	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
@@ -20,7 +21,7 @@ import (
 )
 
 type PaymentHandler struct {
-	repo          *payment.Repository
+	service       *domain.PaymentService
 	bankClient    bank.Client
 	rdb           *redis.Client
 	ledgerClient  pb.LedgerServiceClient
@@ -52,7 +53,7 @@ func (h *PaymentHandler) IdempotencyMiddleware(next http.HandlerFunc) http.Handl
 		}
 
 		// Check if key exists for this user
-		record, err := h.repo.GetIdempotencyKey(r.Context(), userID, key)
+		record, err := h.service.GetIdempotencyKey(r.Context(), userID, key)
 		if err != nil {
 			log.Printf("Error checking idempotency key: %v", err)
 			jsonutil.WriteErrorJSON(w, "Internal Server Error")
@@ -78,7 +79,7 @@ func (h *PaymentHandler) IdempotencyMiddleware(next http.HandlerFunc) http.Handl
 
 		// Save key if it's not a server error (5xx)
 		if recorder.StatusCode < 500 {
-			if err := h.repo.SaveIdempotencyKey(r.Context(), userID, key, recorder.StatusCode, recorder.Body.String()); err != nil {
+			if err := h.service.SaveIdempotencyKey(r.Context(), userID, key, recorder.StatusCode, recorder.Body.String()); err != nil {
 				log.Printf("Failed to save idempotency key: %v", err)
 			}
 		}
@@ -119,7 +120,7 @@ func extractUserIDFromToken(r *http.Request) (string, error) {
 }
 
 func (h *PaymentHandler) CreatePaymentIntent(w http.ResponseWriter, r *http.Request) {
-	timer := prometheus.NewTimer(payment.PaymentLatency.WithLabelValues("create"))
+	timer := prometheus.NewTimer(infrastructure.PaymentLatency.WithLabelValues("create"))
 	defer timer.ObserveDuration()
 
 	if r.Method != http.MethodPost {
@@ -153,7 +154,7 @@ func (h *PaymentHandler) CreatePaymentIntent(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	intent := &payment.PaymentIntent{
+	intent := &domain.PaymentIntent{
 		Amount:               req.Amount,
 		Currency:             req.Currency,
 		Status:               "requires_payment_method",
@@ -163,13 +164,13 @@ func (h *PaymentHandler) CreatePaymentIntent(w http.ResponseWriter, r *http.Requ
 		OnBehalfOf:           req.OnBehalfOf,
 	}
 
-	if err := h.repo.CreatePaymentIntent(r.Context(), intent); err != nil {
-		payment.PaymentRequests.WithLabelValues("create", "error").Inc()
+	if err := h.service.CreatePaymentIntent(r.Context(), intent); err != nil {
+		infrastructure.PaymentRequests.WithLabelValues("create", "error").Inc()
 		jsonutil.WriteErrorJSON(w, "Failed to create payment intent")
 		return
 	}
 
-	payment.PaymentRequests.WithLabelValues("create", "success").Inc()
+	infrastructure.PaymentRequests.WithLabelValues("create", "success").Inc()
 
 	// Audit Log
 	audit.Log(r.Context(), audit.AuditLog{
@@ -187,7 +188,7 @@ func (h *PaymentHandler) CreatePaymentIntent(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Request) {
-	timer := prometheus.NewTimer(payment.PaymentLatency.WithLabelValues("confirm"))
+	timer := prometheus.NewTimer(infrastructure.PaymentLatency.WithLabelValues("confirm"))
 	defer timer.ObserveDuration()
 
 	if r.Method != http.MethodPost {
@@ -220,7 +221,7 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	intent, err := h.repo.GetPaymentIntent(r.Context(), id)
+	intent, err := h.service.GetPaymentIntent(r.Context(), id)
 	if err != nil || intent == nil {
 		jsonutil.WriteErrorJSON(w, "Payment intent not found")
 		return
@@ -233,7 +234,7 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 
 	// Call Mock Bank
 	if _, err := h.bankClient.Charge(r.Context(), intent.Amount, intent.Currency, "tok_visa"); err != nil {
-		if updateErr := h.repo.UpdateStatus(r.Context(), id, "failed"); updateErr != nil {
+		if updateErr := h.service.UpdateStatus(r.Context(), id, "failed"); updateErr != nil {
 			log.Printf("Failed to update status: %v", updateErr)
 		}
 		jsonutil.WriteJSON(w, http.StatusOK, map[string]string{"status": "failed", "reason": "Bank declined"})
@@ -241,13 +242,13 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 	}
 
 	// Update Status
-	if err := h.repo.UpdateStatus(r.Context(), id, "succeeded"); err != nil {
-		payment.PaymentRequests.WithLabelValues("confirm", "error").Inc()
+	if err := h.service.UpdateStatus(r.Context(), id, "succeeded"); err != nil {
+		infrastructure.PaymentRequests.WithLabelValues("confirm", "error").Inc()
 		// Critical: In real world, we need to handle state consistency here
 		jsonutil.WriteErrorJSON(w, "Failed to update payment status")
 		return
 	}
-	payment.PaymentRequests.WithLabelValues("confirm", "success").Inc()
+	infrastructure.PaymentRequests.WithLabelValues("confirm", "success").Inc()
 
 	// Publish Webhook Event to Redis (for CLI listen feature)
 	event := map[string]interface{}{
@@ -344,7 +345,7 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 }
 
 func (h *PaymentHandler) RefundPaymentIntent(w http.ResponseWriter, r *http.Request) {
-	timer := prometheus.NewTimer(payment.PaymentLatency.WithLabelValues("refund"))
+	timer := prometheus.NewTimer(infrastructure.PaymentLatency.WithLabelValues("refund"))
 	defer timer.ObserveDuration()
 
 	if r.Method != http.MethodPost {
@@ -359,7 +360,7 @@ func (h *PaymentHandler) RefundPaymentIntent(w http.ResponseWriter, r *http.Requ
 	}
 	id := pathParts[2]
 
-	intent, err := h.repo.GetPaymentIntent(r.Context(), id)
+	intent, err := h.service.GetPaymentIntent(r.Context(), id)
 	if err != nil || intent == nil {
 		jsonutil.WriteErrorJSON(w, "Payment intent not found")
 		return
@@ -371,8 +372,8 @@ func (h *PaymentHandler) RefundPaymentIntent(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Update Status to refunded
-	if err := h.repo.UpdateStatus(r.Context(), id, "refunded"); err != nil {
-		payment.PaymentRequests.WithLabelValues("refund", "error").Inc()
+	if err := h.service.UpdateStatus(r.Context(), id, "refunded"); err != nil {
+		infrastructure.PaymentRequests.WithLabelValues("refund", "error").Inc()
 		jsonutil.WriteErrorJSON(w, "Failed to update refund status")
 		return
 	}
@@ -408,7 +409,7 @@ func (h *PaymentHandler) RefundPaymentIntent(w http.ResponseWriter, r *http.Requ
 		},
 	})
 
-	payment.PaymentRequests.WithLabelValues("refund", "success").Inc()
+	infrastructure.PaymentRequests.WithLabelValues("refund", "success").Inc()
 	intent.Status = "refunded"
 	jsonutil.WriteJSON(w, http.StatusOK, intent)
 }

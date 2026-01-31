@@ -1,8 +1,7 @@
-package ledger
+package domain
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"testing"
 )
@@ -11,7 +10,7 @@ func TestRecordTransaction_TableDriven(t *testing.T) {
 	tests := []struct {
 		name        string
 		req         TransactionRequest
-		mockSetup   func(*MockDB)
+		mockSetup   func(*MockRepository)
 		expectedErr string
 	}{
 		{
@@ -22,7 +21,7 @@ func TestRecordTransaction_TableDriven(t *testing.T) {
 					{Amount: -50},
 				},
 			},
-			mockSetup:   func(m *MockDB) {},
+			mockSetup:   func(m *MockRepository) {},
 			expectedErr: "transaction is not balanced (sum != 0)",
 		},
 		{
@@ -33,27 +32,22 @@ func TestRecordTransaction_TableDriven(t *testing.T) {
 					{AccountID: "acc_2", Amount: -100},
 				},
 			},
-			mockSetup: func(m *MockDB) {
-				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) Row {
-					return &MockRow{
-						ScanFunc: func(dest ...any) error {
-							return sql.ErrNoRows
-						},
-					}
+			mockSetup: func(m *MockRepository) {
+				m.GetAccountFunc = func(ctx context.Context, id string) (*Account, error) {
+					return nil, nil // Not found
 				}
 			},
 			expectedErr: "account acc_1 not found",
 		},
-		// Add more cases here (Currency mismatch, Idempotency, etc)
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := &MockDB{}
-			tt.mockSetup(mockDB)
-			repo := &Repository{db: mockDB}
+			mockRepo := &MockRepository{}
+			tt.mockSetup(mockRepo)
+			service := NewLedgerService(mockRepo, nil)
 
-			err := repo.RecordTransaction(context.Background(), tt.req)
+			err := service.RecordTransaction(context.Background(), tt.req)
 			if tt.expectedErr != "" {
 				if err == nil || err.Error() != tt.expectedErr {
 					t.Errorf("Expected error '%s', got '%v'", tt.expectedErr, err)
@@ -69,21 +63,17 @@ func TestCreateAccount_TableDriven(t *testing.T) {
 	tests := []struct {
 		name        string
 		accName     string
-		mockSetup   func(*MockDB)
+		mockSetup   func(*MockRepository)
 		expectedID  string
 		expectedErr bool
 	}{
 		{
 			name:    "Success",
 			accName: "Checking",
-			mockSetup: func(m *MockDB) {
-				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) Row {
-					return &MockRow{
-						ScanFunc: func(dest ...any) error {
-							*(dest[0].(*string)) = "acc_123"
-							return nil
-						},
-					}
+			mockSetup: func(m *MockRepository) {
+				m.CreateAccountFunc = func(ctx context.Context, acc *Account) error {
+					acc.ID = "acc_123"
+					return nil
 				}
 			},
 			expectedID: "acc_123",
@@ -91,13 +81,9 @@ func TestCreateAccount_TableDriven(t *testing.T) {
 		{
 			name:    "Database Error",
 			accName: "Savings",
-			mockSetup: func(m *MockDB) {
-				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) Row {
-					return &MockRow{
-						ScanFunc: func(dest ...any) error {
-							return errors.New("db error")
-						},
-					}
+			mockSetup: func(m *MockRepository) {
+				m.CreateAccountFunc = func(ctx context.Context, acc *Account) error {
+					return errors.New("db error")
 				}
 			},
 			expectedErr: true,
@@ -106,11 +92,11 @@ func TestCreateAccount_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := &MockDB{}
-			tt.mockSetup(mockDB)
-			repo := &Repository{db: mockDB}
+			mockRepo := &MockRepository{}
+			tt.mockSetup(mockRepo)
+			service := NewLedgerService(mockRepo, nil)
 
-			acc, err := repo.CreateAccount(context.Background(), tt.accName, Asset, "USD", nil)
+			acc, err := service.CreateAccount(context.Background(), tt.accName, Asset, "USD", nil)
 			if tt.expectedErr {
 				if err == nil {
 					t.Error("Expected error, got nil")

@@ -7,37 +7,30 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/marwan562/fintech-ecosystem/internal/auth"
+	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
+	"github.com/marwan562/fintech-ecosystem/pkg/bcryptutil"
 )
 
 func TestAuthHandler_Login(t *testing.T) {
 	tests := []struct {
 		name           string
 		reqBody        string
-		mockSetup      func(*auth.MockDB)
+		mockSetup      func(*domain.MockRepository)
 		expectedStatus int
 		expectedBody   string
 	}{
 		{
 			name:    "Valid Login",
 			reqBody: `{"email":"test@example.com","password":"password123"}`,
-			mockSetup: func(m *auth.MockDB) {
-				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) auth.Row {
-					return &auth.MockRow{
-						ScanFunc: func(dest ...any) error {
-							if strings.Contains(query, "SELECT id, email, password_hash") {
-								// generate a real bcrypt hash for "password123"
-								hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.MinCost)
-								*(dest[0].(*string)) = "user_123"
-								*(dest[1].(*string)) = "test@example.com"
-								*(dest[2].(*string)) = string(hash)
-								return nil
-							}
-							return nil
-						},
-					}
+			mockSetup: func(m *domain.MockRepository) {
+				m.GetUserByEmailFunc = func(ctx context.Context, email string) (*domain.User, error) {
+					b := &bcryptutil.BcryptUtilsImpl{}
+					hash, _ := b.GenerateHash("password123")
+					return &domain.User{
+						ID:       "user_123",
+						Email:    "test@example.com",
+						Password: hash,
+					}, nil
 				}
 			},
 			expectedStatus: http.StatusOK,
@@ -46,7 +39,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name:           "Missing Email",
 			reqBody:        `{"password":"password123"}`,
-			mockSetup:      func(m *auth.MockDB) {},
+			mockSetup:      func(m *domain.MockRepository) {},
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "Email and password are required",
 		},
@@ -54,10 +47,10 @@ func TestAuthHandler_Login(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mDB := &auth.MockDB{}
-			tt.mockSetup(mDB)
-			repo := auth.NewTestRepository(mDB)
-			h := &AuthHandler{repo: repo}
+			mRepo := &domain.MockRepository{}
+			tt.mockSetup(mRepo)
+			service := domain.NewAuthService(mRepo)
+			h := &AuthHandler{service: service}
 
 			req := httptest.NewRequest("POST", "/login", strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
@@ -78,22 +71,19 @@ func TestAuthHandler_Register(t *testing.T) {
 	tests := []struct {
 		name           string
 		reqBody        string
-		mockSetup      func(*auth.MockDB)
+		mockSetup      func(*domain.MockRepository)
 		expectedStatus int
 		expectedBody   string
 	}{
 		{
 			name:    "Successful Registration",
 			reqBody: `{"email":"new@example.com","password":"password123"}`,
-			mockSetup: func(m *auth.MockDB) {
-				m.QueryRowContextFunc = func(ctx context.Context, query string, args ...any) auth.Row {
-					return &auth.MockRow{
-						ScanFunc: func(dest ...any) error {
-							*(dest[0].(*string)) = "user_456"
-							*(dest[1].(*string)) = "new@example.com"
-							return nil
-						},
-					}
+			mockSetup: func(m *domain.MockRepository) {
+				m.CreateUserFunc = func(ctx context.Context, email, passwordHash string) (*domain.User, error) {
+					return &domain.User{
+						ID:    "user_456",
+						Email: "new@example.com",
+					}, nil
 				}
 			},
 			expectedStatus: http.StatusCreated,
@@ -103,10 +93,10 @@ func TestAuthHandler_Register(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mDB := &auth.MockDB{}
-			tt.mockSetup(mDB)
-			repo := auth.NewTestRepository(mDB)
-			h := &AuthHandler{repo: repo}
+			mRepo := &domain.MockRepository{}
+			tt.mockSetup(mRepo)
+			service := domain.NewAuthService(mRepo)
+			h := &AuthHandler{service: service}
 
 			req := httptest.NewRequest("POST", "/register", strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()

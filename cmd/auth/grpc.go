@@ -7,21 +7,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/auth"
+	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
 	pb "github.com/marwan562/fintech-ecosystem/proto/auth"
 )
 
 type AuthGRPCServer struct {
 	pb.UnimplementedAuthServiceServer
-	repo *auth.Repository
+	service *domain.AuthService
 }
 
-func NewAuthGRPCServer(repo *auth.Repository) *AuthGRPCServer {
-	return &AuthGRPCServer{repo: repo}
+func NewAuthGRPCServer(service *domain.AuthService) *AuthGRPCServer {
+	return &AuthGRPCServer{service: service}
 }
 
 func (s *AuthGRPCServer) ValidateKey(ctx context.Context, req *pb.ValidateKeyRequest) (*pb.ValidateKeyResponse, error) {
-	key, err := s.repo.GetAPIKeyByHash(ctx, req.KeyHash)
+	key, err := s.service.GetAPIKeyByHash(ctx, req.KeyHash)
 	if err != nil {
 		log.Printf("GRPC ValidateKey error: %v", err)
 		return &pb.ValidateKeyResponse{Valid: false}, nil
@@ -47,10 +47,8 @@ func (s *AuthGRPCServer) ValidateKey(ctx context.Context, req *pb.ValidateKeyReq
 }
 
 func (s *AuthGRPCServer) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
-	token, err := s.repo.ValidateOAuthToken(ctx, req.AccessToken)
+	token, err := s.service.ValidateOAuthToken(ctx, req.AccessToken)
 	if err != nil {
-		// Log error only if it's not "not found" or "expired" to avoid noise?
-		// Repo returns error on expiry.
 		return &pb.ValidateTokenResponse{Valid: false}, nil
 	}
 	if token == nil {
@@ -67,7 +65,7 @@ func (s *AuthGRPCServer) ValidateToken(ctx context.Context, req *pb.ValidateToke
 }
 
 func (s *AuthGRPCServer) CreateSSOProvider(ctx context.Context, req *pb.CreateSSOProviderRequest) (*pb.SSOProvider, error) {
-	provider := &auth.SSOProvider{
+	provider := &domain.SSOProvider{
 		OrgID:        req.OrgId,
 		Name:         req.Name,
 		ProviderType: req.ProviderType,
@@ -76,7 +74,7 @@ func (s *AuthGRPCServer) CreateSSOProvider(ctx context.Context, req *pb.CreateSS
 		ClientSecret: req.ClientSecret,
 	}
 
-	if err := s.repo.CreateSSOProvider(ctx, provider); err != nil {
+	if err := s.service.CreateSSOProvider(ctx, provider); err != nil {
 		return nil, err
 	}
 
@@ -92,7 +90,7 @@ func (s *AuthGRPCServer) CreateSSOProvider(ctx context.Context, req *pb.CreateSS
 }
 
 func (s *AuthGRPCServer) GetSSOProvider(ctx context.Context, req *pb.GetSSOProviderRequest) (*pb.SSOProvider, error) {
-	provider, err := s.repo.GetSSOProviderByID(ctx, req.Id)
+	provider, err := s.service.GetSSOProviderByID(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -116,24 +114,22 @@ func (s *AuthGRPCServer) InitiateSSO(ctx context.Context, req *pb.InitiateSSOReq
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid email format")
 	}
-	domain := parts[1]
+	domainName := parts[1]
 
-	provider, err := s.repo.GetSSOProviderByDomain(ctx, domain)
+	provider, err := s.service.GetSSOProviderByDomain(ctx, domainName)
 	if err != nil {
 		return nil, err
 	}
 	if provider == nil {
-		return nil, fmt.Errorf("no SSO provider configured for domain %s", domain)
+		return nil, fmt.Errorf("no SSO provider configured for domain %s", domainName)
 	}
 
 	var authURL string
 	switch provider.ProviderType {
 	case "oidc":
-		// Basic OIDC initiation URL
 		authURL = fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&response_type=code&scope=openid email profile&state=sso_%s",
 			provider.IssuerURL, provider.ClientID, req.RedirectUri, provider.ID)
 	case "saml":
-		// Basic SAML/Redirect binding initiation placeholder
 		authURL = fmt.Sprintf("%s?SAMLRequest=...", provider.SSOURL)
 	}
 
@@ -141,7 +137,7 @@ func (s *AuthGRPCServer) InitiateSSO(ctx context.Context, req *pb.InitiateSSOReq
 }
 
 func (s *AuthGRPCServer) GetAuditLogs(ctx context.Context, req *pb.GetAuditLogsRequest) (*pb.GetAuditLogsResponse, error) {
-	logs, total, err := s.repo.GetAuditLogs(ctx, req.OrgId, int(req.Limit), int(req.Offset), req.Action)
+	logs, total, err := s.service.GetAuditLogs(ctx, req.OrgId, int(req.Limit), int(req.Offset), req.Action)
 	if err != nil {
 		return nil, err
 	}
@@ -168,13 +164,13 @@ func (s *AuthGRPCServer) GetAuditLogs(ctx context.Context, req *pb.GetAuditLogsR
 }
 
 func (s *AuthGRPCServer) AddTeamMember(ctx context.Context, req *pb.AddTeamMemberRequest) (*pb.Membership, error) {
-	err := s.repo.AddMember(ctx, req.UserId, req.OrgId, req.Role)
+	err := s.service.AddMember(ctx, req.UserId, req.OrgId, req.Role)
 	if err != nil {
 		return nil, err
 	}
 
 	// Fetch to return full object (could be optimized)
-	memberships, err := s.repo.GetUserMemberships(ctx, req.UserId)
+	memberships, err := s.service.GetUserMemberships(ctx, req.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -194,14 +190,14 @@ func (s *AuthGRPCServer) AddTeamMember(ctx context.Context, req *pb.AddTeamMembe
 }
 
 func (s *AuthGRPCServer) RemoveTeamMember(ctx context.Context, req *pb.RemoveTeamMemberRequest) (*pb.RemoveTeamMemberResponse, error) {
-	if err := s.repo.RemoveMember(ctx, req.UserId, req.OrgId); err != nil {
+	if err := s.service.RemoveMember(ctx, req.UserId, req.OrgId); err != nil {
 		return nil, err
 	}
 	return &pb.RemoveTeamMemberResponse{Success: true}, nil
 }
 
 func (s *AuthGRPCServer) ListTeamMembers(ctx context.Context, req *pb.ListTeamMembersRequest) (*pb.ListTeamMembersResponse, error) {
-	memberships, err := s.repo.ListOrgMembers(ctx, req.OrgId)
+	memberships, err := s.service.ListOrgMembers(ctx, req.OrgId)
 	if err != nil {
 		return nil, err
 	}

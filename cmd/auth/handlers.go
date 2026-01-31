@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/auth"
+	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
 	"github.com/marwan562/fintech-ecosystem/pkg/apikey"
 	"github.com/marwan562/fintech-ecosystem/pkg/bcryptutil"
 	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
@@ -24,7 +24,7 @@ type GenerateAPIKeyResponse struct {
 	TruncatedKey string `json:"truncated_key"`
 }
 
-// Helper to extract UserID from JWT (duplicated from payments, common lib pending)
+// Helper to extract UserID from JWT
 func extractUserIDFromToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -67,7 +67,7 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	truncated := fullKey[len(fullKey)-4:]
 
-	apiKey := &auth.APIKey{
+	key := &domain.APIKey{
 		UserID:       userID,
 		KeyPrefix:    prefix,
 		KeyHash:      hash,
@@ -75,7 +75,7 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 		Environment:  req.Environment,
 	}
 
-	if err := h.repo.CreateAPIKey(r.Context(), apiKey); err != nil {
+	if err := h.service.CreateAPIKey(r.Context(), key); err != nil {
 		jsonutil.WriteErrorJSON(w, "Failed to save API key")
 		return
 	}
@@ -100,16 +100,13 @@ type ValidateAPIKeyResponse struct {
 }
 
 func (h *AuthHandler) ValidateAPIKey(w http.ResponseWriter, r *http.Request) {
-	// Internal endpoint, should be protected (e.g. valid only from localhost or via mTLS/secret)
-	// For now, assuming network isolation or simple IP check in real world.
-
 	var req ValidateAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonutil.WriteErrorJSON(w, "Invalid request body")
 		return
 	}
 
-	key, err := h.repo.GetAPIKeyByHash(r.Context(), req.KeyHash)
+	key, err := h.service.GetAPIKeyByHash(r.Context(), req.KeyHash)
 	if err != nil {
 		log.Printf("Error validating key: %v", err)
 		jsonutil.WriteErrorJSON(w, "Validation failed")
@@ -131,7 +128,7 @@ func (h *AuthHandler) ValidateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 // AuthHandler holds dependencies for authentication endpoints.
 type AuthHandler struct {
-	repo       *auth.Repository
+	service    *domain.AuthService
 	hmacSecret string
 }
 
@@ -170,7 +167,6 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use bcryptutil to hash the password securely
 	b := &bcryptutil.BcryptUtilsImpl{}
 	passwordHash, err := b.GenerateHash(req.Password)
 	if err != nil {
@@ -178,10 +174,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.repo.CreateUser(r.Context(), req.Email, passwordHash)
+	user, err := h.service.CreateUser(r.Context(), req.Email, passwordHash)
 	if err != nil {
-		// Check for duplicate key error (generic check for now)
-		// In a real app, parse the error code for unique constraint violation
 		jsonutil.WriteErrorJSON(w, "Failed to create user (email might be taken)")
 		return
 	}
@@ -207,18 +201,16 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch user by email
-	user, err := h.repo.GetUserByEmail(r.Context(), req.Email)
+	user, err := h.service.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		jsonutil.WriteErrorJSON(w, "Internal server error")
 		return
 	}
 	if user == nil {
-		jsonutil.WriteErrorJSON(w, "Invalid email or password") // Generic message for security
+		jsonutil.WriteErrorJSON(w, "Invalid email or password")
 		return
 	}
 
-	// Verify password
 	b := &bcryptutil.BcryptUtilsImpl{}
 	match := b.CompareHash(req.Password, user.Password)
 	if !match {
@@ -226,7 +218,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT
 	token, err := jwtutil.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		jsonutil.WriteErrorJSON(w, "Failed to generate token")
@@ -246,7 +237,7 @@ type OAuthTokenResponse struct {
 	Scope        string `json:"scope,omitempty"`
 }
 
-// OAuthTokenHandler handles OAuth2 token requests (Client Credentials and Authorization Code).
+// OAuthTokenHandler handles OAuth2 token requests.
 func (h *AuthHandler) OAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonutil.WriteErrorJSON(w, "Method not allowed")
@@ -265,7 +256,6 @@ func (h *AuthHandler) OAuthTokenHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// handleClientCredentials processes client_credentials grant.
 func (h *AuthHandler) handleClientCredentials(w http.ResponseWriter, r *http.Request) {
 	clientID, clientSecret, ok := r.BasicAuth()
 	if !ok {
@@ -279,7 +269,7 @@ func (h *AuthHandler) handleClientCredentials(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	client, err := h.repo.GetClientByID(r.Context(), clientID)
+	client, err := h.service.GetClientByID(r.Context(), clientID)
 	if err != nil {
 		log.Printf("handleClientCredentials: DB error: %v", err)
 		writeOAuthError(w, "server_error", "Internal error", http.StatusInternalServerError)
@@ -290,7 +280,7 @@ func (h *AuthHandler) handleClientCredentials(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	incomingHash := auth.HashString(clientSecret)
+	incomingHash := h.service.HashString(clientSecret)
 	if incomingHash != client.ClientSecretHash {
 		writeOAuthError(w, "invalid_client", "Invalid credentials", http.StatusUnauthorized)
 		return
@@ -304,7 +294,6 @@ func (h *AuthHandler) handleClientCredentials(w http.ResponseWriter, r *http.Req
 	h.issueTokens(w, r, client.ID, client.UserID, scope)
 }
 
-// handleAuthorizationCode processes authorization_code grant with PKCE.
 func (h *AuthHandler) handleAuthorizationCode(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	redirectURI := r.FormValue("redirect_uri")
@@ -316,7 +305,7 @@ func (h *AuthHandler) handleAuthorizationCode(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	authCode, err := h.repo.GetAuthorizationCode(r.Context(), code)
+	authCode, err := h.service.GetAuthorizationCode(r.Context(), code)
 	if err != nil {
 		log.Printf("handleAuthorizationCode: DB error: %v", err)
 		writeOAuthError(w, "server_error", "Internal error", http.StatusInternalServerError)
@@ -327,44 +316,38 @@ func (h *AuthHandler) handleAuthorizationCode(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Validate code hasn't been used
 	if authCode.Used {
 		writeOAuthError(w, "invalid_grant", "Authorization code already used", http.StatusBadRequest)
 		return
 	}
 
-	// Validate code hasn't expired
 	if time.Now().After(authCode.ExpiresAt) {
 		writeOAuthError(w, "invalid_grant", "Authorization code expired", http.StatusBadRequest)
 		return
 	}
 
-	// Validate client_id matches
 	if clientID != "" && clientID != authCode.ClientID {
 		writeOAuthError(w, "invalid_grant", "Client mismatch", http.StatusBadRequest)
 		return
 	}
 
-	// Validate redirect_uri matches
 	if redirectURI != "" && redirectURI != authCode.RedirectURI {
 		writeOAuthError(w, "invalid_grant", "Redirect URI mismatch", http.StatusBadRequest)
 		return
 	}
 
-	// Validate PKCE code_verifier if code_challenge was provided
 	if authCode.CodeChallenge != "" {
 		if codeVerifier == "" {
 			writeOAuthError(w, "invalid_request", "Code verifier required", http.StatusBadRequest)
 			return
 		}
-		if !auth.VerifyCodeChallenge(codeVerifier, authCode.CodeChallenge, authCode.CodeChallengeMethod) {
+		if !h.service.VerifyCodeChallenge(codeVerifier, authCode.CodeChallenge, authCode.CodeChallengeMethod) {
 			writeOAuthError(w, "invalid_grant", "Invalid code verifier", http.StatusBadRequest)
 			return
 		}
 	}
 
-	// Mark code as used
-	if err := h.repo.MarkAuthorizationCodeUsed(r.Context(), code); err != nil {
+	if err := h.service.MarkAuthorizationCodeUsed(r.Context(), code); err != nil {
 		log.Printf("handleAuthorizationCode: Failed to mark code used: %v", err)
 		writeOAuthError(w, "server_error", "Internal error", http.StatusInternalServerError)
 		return
@@ -373,15 +356,14 @@ func (h *AuthHandler) handleAuthorizationCode(w http.ResponseWriter, r *http.Req
 	h.issueTokens(w, r, authCode.ClientID, authCode.UserID, authCode.Scope)
 }
 
-// issueTokens generates and returns access and refresh tokens.
 func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, clientID, userID, scope string) {
-	accessToken, err := auth.GenerateRandomString(32)
+	accessToken, err := h.service.GenerateRandomString(32)
 	if err != nil {
 		writeOAuthError(w, "server_error", "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
-	refreshToken, err := auth.GenerateRandomString(32)
+	refreshToken, err := h.service.GenerateRandomString(32)
 	if err != nil {
 		writeOAuthError(w, "server_error", "Failed to generate token", http.StatusInternalServerError)
 		return
@@ -390,7 +372,7 @@ func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, client
 	expiresIn := 3600 // 1 hour
 	expiresAt := time.Now().Add(time.Duration(expiresIn) * time.Second)
 
-	token := &auth.OAuthToken{
+	token := &domain.OAuthToken{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ClientID:     clientID,
@@ -399,7 +381,7 @@ func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, client
 		ExpiresAt:    expiresAt,
 	}
 
-	if err := h.repo.CreateOAuthToken(r.Context(), token); err != nil {
+	if err := h.service.CreateOAuthToken(r.Context(), token); err != nil {
 		log.Printf("issueTokens: Failed to create token: %v", err)
 		writeOAuthError(w, "server_error", "Failed to store token", http.StatusInternalServerError)
 		return
@@ -425,14 +407,7 @@ type AuthorizeRequest struct {
 	CodeChallengeMethod string
 }
 
-// AuthorizeHandler handles the /oauth/authorize endpoint for Authorization Code flow.
 func (h *AuthHandler) AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
-		return
-	}
-
-	// Parse request parameters
 	req := AuthorizeRequest{
 		ResponseType:        r.FormValue("response_type"),
 		ClientID:            r.FormValue("client_id"),
@@ -443,14 +418,12 @@ func (h *AuthHandler) AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 		CodeChallengeMethod: r.FormValue("code_challenge_method"),
 	}
 
-	// Validate response_type
 	if req.ResponseType != "code" {
 		writeOAuthError(w, "unsupported_response_type", "Only 'code' response type supported", http.StatusBadRequest)
 		return
 	}
 
-	// Validate client
-	client, err := h.repo.GetClientByID(r.Context(), req.ClientID)
+	client, err := h.service.GetClientByID(r.Context(), req.ClientID)
 	if err != nil {
 		log.Printf("AuthorizeHandler: DB error: %v", err)
 		writeOAuthError(w, "server_error", "Internal error", http.StatusInternalServerError)
@@ -461,13 +434,12 @@ func (h *AuthHandler) AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate redirect_uri
 	if req.RedirectURI == "" {
 		writeOAuthError(w, "invalid_request", "Redirect URI required", http.StatusBadRequest)
 		return
 	}
 
-	validURI, err := h.repo.ValidateRedirectURI(r.Context(), req.ClientID, req.RedirectURI)
+	validURI, err := h.service.ValidateRedirectURI(r.Context(), req.ClientID, req.RedirectURI)
 	if err != nil {
 		log.Printf("AuthorizeHandler: Failed to validate redirect URI: %v", err)
 		writeOAuthError(w, "server_error", "Internal error", http.StatusInternalServerError)
@@ -478,33 +450,28 @@ func (h *AuthHandler) AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate PKCE for public clients
 	if client.IsPublic && req.CodeChallenge == "" {
 		writeOAuthError(w, "invalid_request", "PKCE required for public clients", http.StatusBadRequest)
 		return
 	}
 
-	// Default code_challenge_method to S256
 	if req.CodeChallenge != "" && req.CodeChallengeMethod == "" {
 		req.CodeChallengeMethod = "S256"
 	}
 
-	// For now, auto-approve (no consent screen) - get user from JWT
 	userID, err := extractUserIDFromToken(r)
 	if err != nil || userID == "" {
-		// Redirect to login or return error
 		writeOAuthError(w, "access_denied", "User not authenticated", http.StatusUnauthorized)
 		return
 	}
 
-	// Generate authorization code
-	codeValue, err := auth.GenerateRandomString(32)
+	codeValue, err := h.service.GenerateRandomString(32)
 	if err != nil {
 		writeOAuthError(w, "server_error", "Failed to generate code", http.StatusInternalServerError)
 		return
 	}
 
-	authCode := &auth.AuthorizationCode{
+	authCode := &domain.AuthorizationCode{
 		Code:                codeValue,
 		ClientID:            req.ClientID,
 		UserID:              userID,
@@ -512,16 +479,15 @@ func (h *AuthHandler) AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 		Scope:               req.Scope,
 		CodeChallenge:       req.CodeChallenge,
 		CodeChallengeMethod: req.CodeChallengeMethod,
-		ExpiresAt:           time.Now().Add(10 * time.Minute), // Codes expire in 10 minutes
+		ExpiresAt:           time.Now().Add(10 * time.Minute),
 	}
 
-	if err := h.repo.CreateAuthorizationCode(r.Context(), authCode); err != nil {
+	if err := h.service.CreateAuthorizationCode(r.Context(), authCode); err != nil {
 		log.Printf("AuthorizeHandler: Failed to create auth code: %v", err)
 		writeOAuthError(w, "server_error", "Failed to create authorization code", http.StatusInternalServerError)
 		return
 	}
 
-	// Build redirect URL with code and state
 	redirectURL := req.RedirectURI + "?code=" + codeValue
 	if req.State != "" {
 		redirectURL += "&state=" + req.State
@@ -530,30 +496,21 @@ func (h *AuthHandler) AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
-// RegisterClientRequest defines the payload for client registration.
 type RegisterClientRequest struct {
 	Name         string   `json:"name"`
 	RedirectURIs []string `json:"redirect_uris"`
 	IsPublic     bool     `json:"is_public"`
 }
 
-// RegisterClientResponse returns the new client credentials.
 type RegisterClientResponse struct {
 	ClientID     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret,omitempty"` // Only shown once, empty for public clients
+	ClientSecret string   `json:"client_secret,omitempty"`
 	Name         string   `json:"name"`
 	RedirectURIs []string `json:"redirect_uris"`
 	IsPublic     bool     `json:"is_public"`
 }
 
-// RegisterClientHandler allows creating new OAuth2 clients.
 func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
-		return
-	}
-
-	// Require authentication
 	userID, err := extractUserIDFromToken(r)
 	if err != nil || userID == "" {
 		jsonutil.WriteErrorJSON(w, "Unauthorized")
@@ -576,8 +533,7 @@ func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Generate client ID
-	clientID, err := auth.GenerateRandomString(16)
+	clientID, err := h.service.GenerateRandomString(16)
 	if err != nil {
 		jsonutil.WriteErrorJSON(w, "Failed to generate client ID")
 		return
@@ -585,15 +541,15 @@ func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Reque
 
 	var clientSecret, clientSecretHash string
 	if !req.IsPublic {
-		clientSecret, err = auth.GenerateRandomString(32)
+		clientSecret, err = h.service.GenerateRandomString(32)
 		if err != nil {
 			jsonutil.WriteErrorJSON(w, "Failed to generate client secret")
 			return
 		}
-		clientSecretHash = auth.HashString(clientSecret)
+		clientSecretHash = h.service.HashString(clientSecret)
 	}
 
-	client := &auth.OAuthClient{
+	client := &domain.OAuthClient{
 		ID:               clientID,
 		ClientSecretHash: clientSecretHash,
 		UserID:           userID,
@@ -601,15 +557,14 @@ func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Reque
 		IsPublic:         req.IsPublic,
 	}
 
-	if err := h.repo.CreateOAuthClient(r.Context(), client); err != nil {
+	if err := h.service.CreateOAuthClient(r.Context(), client); err != nil {
 		log.Printf("RegisterClientHandler: Failed to create client: %v", err)
 		jsonutil.WriteErrorJSON(w, "Failed to create client")
 		return
 	}
 
-	// Add redirect URIs
 	for _, uri := range req.RedirectURIs {
-		if err := h.repo.AddRedirectURI(r.Context(), clientID, uri); err != nil {
+		if err := h.service.AddRedirectURI(r.Context(), clientID, uri); err != nil {
 			log.Printf("RegisterClientHandler: Failed to add redirect URI: %v", err)
 		}
 	}
@@ -623,13 +578,6 @@ func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// TokenIntrospectionRequest defines RFC 7662 introspection request.
-type TokenIntrospectionRequest struct {
-	Token         string `json:"token"`
-	TokenTypeHint string `json:"token_type_hint,omitempty"`
-}
-
-// TokenIntrospectionResponse defines RFC 7662 introspection response.
 type TokenIntrospectionResponse struct {
 	Active    bool   `json:"active"`
 	Scope     string `json:"scope,omitempty"`
@@ -641,20 +589,14 @@ type TokenIntrospectionResponse struct {
 	Sub       string `json:"sub,omitempty"`
 }
 
-// TokenIntrospectionHandler implements RFC 7662 token introspection.
 func (h *AuthHandler) TokenIntrospectionHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
-		return
-	}
-
 	token := r.FormValue("token")
 	if token == "" {
 		jsonutil.WriteJSON(w, http.StatusOK, TokenIntrospectionResponse{Active: false})
 		return
 	}
 
-	oauthToken, err := h.repo.ValidateOAuthToken(r.Context(), token)
+	oauthToken, err := h.service.ValidateOAuthToken(r.Context(), token)
 	if err != nil || oauthToken == nil {
 		jsonutil.WriteJSON(w, http.StatusOK, TokenIntrospectionResponse{Active: false})
 		return
@@ -671,60 +613,39 @@ func (h *AuthHandler) TokenIntrospectionHandler(w http.ResponseWriter, r *http.R
 	})
 }
 
-// SSOCallbackRequest defines the payload for mock SSO callback
 type SSOCallbackRequest struct {
 	Provider       string `json:"provider"`
 	ProviderUserID string `json:"provider_user_id"`
 	Email          string `json:"email"`
 }
 
-// SSOCallback handles the response from an external SSO provider.
 func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
-		return
-	}
-
 	var req SSOCallbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonutil.WriteErrorJSON(w, "Invalid request body")
 		return
 	}
 
-	// 1. Check if external identity already exists
-	user, err := h.repo.GetUserByExternalID(r.Context(), req.Provider, req.ProviderUserID)
+	user, err := h.service.GetUserByExternalID(r.Context(), req.Provider, req.ProviderUserID)
 	if err != nil {
 		log.Printf("SSOCallback: DB error: %v", err)
 		jsonutil.WriteErrorJSON(w, "Internal server error")
 		return
 	}
 
-	// 2. If user doesn't exist, create a new one (JIT provisioning)
 	if user == nil {
-		// Mock organization logic: derive org from email domain if possible
-		domain := ""
-		if parts := strings.Split(req.Email, "@"); len(parts) == 2 {
-			domain = parts[1]
-		}
-
-		// Create user without password (SSO only)
-		user, err = h.repo.CreateUser(r.Context(), req.Email, "SSO_MANAGED")
+		user, err = h.service.CreateUser(r.Context(), req.Email, "SSO_MANAGED")
 		if err != nil {
 			log.Printf("SSOCallback: Failed to create user: %v", err)
 			jsonutil.WriteErrorJSON(w, "Failed to provision user")
 			return
 		}
 
-		// Link identity
-		if err := h.repo.LinkExternalIdentity(r.Context(), user.ID, req.Provider, req.ProviderUserID); err != nil {
+		if err := h.service.LinkExternalIdentity(r.Context(), user.ID, req.Provider, req.ProviderUserID); err != nil {
 			log.Printf("SSOCallback: Failed to link identity: %v", err)
 		}
-
-		// Optional: Auto-add to organization based on domain
-		log.Printf("JIT Provisioned user %s for org %s", user.Email, domain)
 	}
 
-	// 3. Issue JWT
 	token, err := jwtutil.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		jsonutil.WriteErrorJSON(w, "Failed to generate token")
@@ -734,7 +655,6 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	jsonutil.WriteJSON(w, http.StatusOK, LoginResponse{Token: token})
 }
 
-// writeOAuthError writes an OAuth2-compliant error response.
 func writeOAuthError(w http.ResponseWriter, errorCode, description string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
