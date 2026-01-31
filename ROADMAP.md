@@ -58,8 +58,9 @@ Provide **developer-first, scalable, open-source financial infrastructure** that
 - [x] **Enterprise Compliance** — SOC2/PCI-DSS compliance documentation and hardened security controls for the hosted tier.
 
 ### 💼 Commercial Support
-- [ ] **Paid Support & SLAs** — Offer tiered support packages for companies requiring guaranteed uptime and priority bugfixes.
-- [ ] **Custom Integrations** — Provide professional services for complex migrations (e.g., from Stripe) and bespoke marketplace setups.
+- [x] **Paid Support & SLAs** — Offer tiered support packages for companies requiring guaranteed uptime and priority bugfixes.
+- [x] **Custom Integrations** — Provide professional services for complex migrations (e.g., from Stripe) and bespoke marketplace setups.
+
 
 ---
 
