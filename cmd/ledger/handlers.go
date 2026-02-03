@@ -34,7 +34,7 @@ func (h *LedgerHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		req.Currency = "USD" // Default
 	}
 
-	acc, err := h.service.CreateAccount(r.Context(), req.Name, req.Type, req.Currency, req.UserID)
+	acc, err := h.service.CreateAccount(r.Context(), req.Name, req.Type, req.Currency, req.UserID, r.Header.Get("X-Zone-ID"), r.Header.Get("X-Zone-Mode"))
 	if err != nil {
 		jsonutil.WriteErrorJSON(w, "Failed to create account")
 		return
@@ -77,7 +77,7 @@ func (h *LedgerHandler) RecordTransaction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := h.service.RecordTransaction(r.Context(), req); err != nil {
+	if err := h.service.RecordTransaction(r.Context(), req, r.Header.Get("X-Zone-ID"), r.Header.Get("X-Zone-Mode")); err != nil {
 		if strings.Contains(err.Error(), "transaction is not balanced") {
 			jsonutil.WriteErrorJSON(w, err.Error()) // 400 Bad Request
 		} else {

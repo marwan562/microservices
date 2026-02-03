@@ -22,6 +22,8 @@ const (
 
 type Account struct {
 	ID        string      `json:"id"`
+	ZoneID    string      `json:"zone_id"`
+	Mode      string      `json:"mode"`
 	Name      string      `json:"name"`
 	Type      AccountType `json:"type"`
 	Currency  string      `json:"currency"`
@@ -32,6 +34,8 @@ type Account struct {
 
 type Transaction struct {
 	ID          string    `json:"id"`
+	ZoneID      string    `json:"zone_id"`
+	Mode        string    `json:"mode"`
 	ReferenceID string    `json:"reference_id"`
 	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`

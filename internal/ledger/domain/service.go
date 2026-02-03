@@ -23,12 +23,14 @@ func NewLedgerService(repo Repository, metrics Metrics) *LedgerService {
 	}
 }
 
-func (s *LedgerService) CreateAccount(ctx context.Context, name string, accType AccountType, currency string, userID *string) (*Account, error) {
+func (s *LedgerService) CreateAccount(ctx context.Context, name string, accType AccountType, currency string, userID *string, zoneID, mode string) (*Account, error) {
 	acc := &Account{
 		Name:     name,
 		Type:     accType,
 		Currency: currency,
 		UserID:   userID,
+		ZoneID:   zoneID,
+		Mode:     mode,
 	}
 	err := s.repo.CreateAccount(ctx, acc)
 	if err != nil {
@@ -42,7 +44,7 @@ func (s *LedgerService) GetAccount(ctx context.Context, id string) (*Account, er
 	return s.repo.GetAccount(ctx, id)
 }
 
-func (s *LedgerService) RecordTransaction(ctx context.Context, req TransactionRequest) (err error) {
+func (s *LedgerService) RecordTransaction(ctx context.Context, req TransactionRequest, zoneID, mode string) (err error) {
 	defer func() {
 		if s.metrics != nil {
 			if err != nil {
@@ -99,6 +101,8 @@ func (s *LedgerService) RecordTransaction(ctx context.Context, req TransactionRe
 	transactionID, err := txCtx.CreateTransaction(ctx, &Transaction{
 		ReferenceID: req.ReferenceID,
 		Description: req.Description,
+		ZoneID:      zoneID,
+		Mode:        mode,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
@@ -123,6 +127,8 @@ func (s *LedgerService) RecordTransaction(ctx context.Context, req TransactionRe
 		"reference_id": req.ReferenceID,
 		"description":  req.Description,
 		"entries":      req.Entries,
+		"zone_id":      zoneID,
+		"mode":         mode,
 	})
 	err = txCtx.CreateOutboxEvent(ctx, "transaction.recorded", eventData)
 	if err != nil {

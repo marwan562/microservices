@@ -22,9 +22,9 @@ func (r *SQLRepository) CreatePaymentIntent(ctx context.Context, intent *domain.
 		intent.Currency = "USD"
 	}
 	err := r.db.QueryRowContext(ctx,
-		`INSERT INTO payment_intents (amount, currency, status, description, user_id, application_fee_amount, on_behalf_of) 
-		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
-		intent.Amount, intent.Currency, intent.Status, intent.Description, intent.UserID, intent.ApplicationFeeAmount, intent.OnBehalfOf).
+		`INSERT INTO payment_intents (amount, currency, status, description, user_id, application_fee_amount, on_behalf_of, zone_id, mode) 
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at`,
+		intent.Amount, intent.Currency, intent.Status, intent.Description, intent.UserID, intent.ApplicationFeeAmount, intent.OnBehalfOf, intent.ZoneID, intent.Mode).
 		Scan(&intent.ID, &intent.CreatedAt)
 
 	if err != nil {
@@ -36,8 +36,8 @@ func (r *SQLRepository) CreatePaymentIntent(ctx context.Context, intent *domain.
 func (r *SQLRepository) GetPaymentIntent(ctx context.Context, id string) (*domain.PaymentIntent, error) {
 	var intent domain.PaymentIntent
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, amount, currency, status, description, user_id, application_fee_amount, on_behalf_of, created_at FROM payment_intents WHERE id = $1",
-		id).Scan(&intent.ID, &intent.Amount, &intent.Currency, &intent.Status, &intent.Description, &intent.UserID, &intent.ApplicationFeeAmount, &intent.OnBehalfOf, &intent.CreatedAt)
+		"SELECT id, amount, currency, status, description, user_id, application_fee_amount, on_behalf_of, zone_id, mode, created_at FROM payment_intents WHERE id = $1",
+		id).Scan(&intent.ID, &intent.Amount, &intent.Currency, &intent.Status, &intent.Description, &intent.UserID, &intent.ApplicationFeeAmount, &intent.OnBehalfOf, &intent.ZoneID, &intent.Mode, &intent.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

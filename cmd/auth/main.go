@@ -9,6 +9,8 @@ import (
 
 	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
 	"github.com/marwan562/fintech-ecosystem/internal/auth/infrastructure"
+	zoneDomain "github.com/marwan562/fintech-ecosystem/internal/zone"
+	zoneInfra "github.com/marwan562/fintech-ecosystem/internal/zone/infrastructure"
 	"github.com/marwan562/fintech-ecosystem/pkg/database"
 	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
 	"github.com/marwan562/fintech-ecosystem/pkg/observability"
@@ -54,7 +56,11 @@ func main() {
 	sqlRepo := infrastructure.NewSQLRepository(db)
 	authService := domain.NewAuthService(sqlRepo)
 
+	zoneRepo := zoneInfra.NewSQLRepository(db)
+	zoneService := zoneDomain.NewService(zoneRepo)
+
 	handler := &AuthHandler{service: authService, hmacSecret: hmacSecret}
+	zoneHandler := &ZoneHandler{service: zoneService}
 
 	// Initialize Tracer
 	shutdown, err := observability.InitTracer(context.Background(), observability.Config{
@@ -101,6 +107,22 @@ func main() {
 	// Internal endpoint for Gateway Validation
 	mux.HandleFunc("/validate_key", handler.ValidateAPIKey)
 	mux.HandleFunc("/sso/callback", handler.SSOCallback)
+
+	// Zone Management
+	mux.HandleFunc("/zones", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			zoneHandler.CreateZone(w, r)
+		case http.MethodGet:
+			if r.URL.Query().Get("id") != "" {
+				zoneHandler.GetZone(w, r)
+			} else {
+				zoneHandler.ListZones(w, r)
+			}
+		default:
+			jsonutil.WriteErrorJSON(w, "Method not allowed")
+		}
+	})
 
 	log.Println("Auth service HTTP starting on :8081")
 

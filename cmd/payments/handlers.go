@@ -160,6 +160,8 @@ func (h *PaymentHandler) CreatePaymentIntent(w http.ResponseWriter, r *http.Requ
 		Status:               "requires_payment_method",
 		Description:          req.Description,
 		UserID:               userID,
+		ZoneID:               r.Header.Get("X-Zone-ID"),
+		Mode:                 r.Header.Get("X-Zone-Mode"),
 		ApplicationFeeAmount: req.ApplicationFeeAmount,
 		OnBehalfOf:           req.OnBehalfOf,
 	}
@@ -181,6 +183,8 @@ func (h *PaymentHandler) CreatePaymentIntent(w http.ResponseWriter, r *http.Requ
 		Metadata: map[string]interface{}{
 			"amount":   intent.Amount,
 			"currency": intent.Currency,
+			"zone_id":  intent.ZoneID,
+			"mode":     intent.Mode,
 		},
 	})
 
@@ -252,8 +256,10 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 
 	// Publish Webhook Event to Redis (for CLI listen feature)
 	event := map[string]interface{}{
-		"type": "payment.succeeded",
-		"data": intent,
+		"type":    "payment.succeeded",
+		"zone_id": intent.ZoneID,
+		"mode":    intent.Mode,
+		"data":    intent,
 	}
 	eventBody, _ := json.Marshal(event)
 	h.rdb.Publish(r.Context(), "webhook_events", eventBody)
@@ -264,6 +270,8 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 		"id":        "evt_" + intent.ID,
 		"type":      "payment.succeeded",
 		"timestamp": intent.CreatedAt,
+		"zone_id":   intent.ZoneID,
+		"mode":      intent.Mode,
 		"data": map[string]interface{}{
 			"payment_id":  intent.ID,
 			"user_id":     intent.UserID,
@@ -291,6 +299,8 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 			Currency:    intent.Currency,
 			Description: "Payout for " + intent.ID,
 			ReferenceId: intent.ID,
+			ZoneId:      intent.ZoneID,
+			Mode:        intent.Mode,
 		})
 		if err != nil {
 			log.Printf("Failed to record net amount in ledger: %v", err)
@@ -303,6 +313,8 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 			Currency:    intent.Currency,
 			Description: "Fee for " + intent.ID,
 			ReferenceId: intent.ID,
+			ZoneId:      intent.ZoneID,
+			Mode:        intent.Mode,
 		})
 		if err != nil {
 			log.Printf("Failed to record fee in ledger: %v", err)
@@ -315,6 +327,8 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 			Currency:    intent.Currency,
 			Description: "Payment " + intent.ID,
 			ReferenceId: intent.ID,
+			ZoneId:      intent.ZoneID,
+			Mode:        intent.Mode,
 		})
 		if err != nil {
 			log.Printf("Failed to record debit in ledger: %v", err)
@@ -329,6 +343,8 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 			Currency:    intent.Currency,
 			Description: "Payment for intent " + intent.ID,
 			ReferenceId: intent.ID,
+			ZoneId:      intent.ZoneID,
+			Mode:        intent.Mode,
 		})
 		if err != nil {
 			log.Printf("Failed to record transaction in ledger: %v", err)

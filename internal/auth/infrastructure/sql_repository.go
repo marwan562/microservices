@@ -215,9 +215,9 @@ func (r *SQLRepository) CreateAPIKey(ctx context.Context, key *domain.APIKey) er
 		key.Scopes = "*"
 	}
 	err := r.db.QueryRowContext(ctx,
-		`INSERT INTO api_keys (user_id, org_id, key_prefix, key_hash, truncated_key, environment, scopes)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
-		key.UserID, key.OrgID, key.KeyPrefix, key.KeyHash, key.TruncatedKey, key.Environment, key.Scopes).
+		`INSERT INTO api_keys (user_id, org_id, zone_id, mode, key_prefix, key_hash, truncated_key, environment, scopes)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at`,
+		key.UserID, key.OrgID, key.ZoneID, key.Mode, key.KeyPrefix, key.KeyHash, key.TruncatedKey, key.Environment, key.Scopes).
 		Scan(&key.ID, &key.CreatedAt)
 
 	if err != nil {
@@ -230,10 +230,14 @@ func (r *SQLRepository) GetAPIKeyByHash(ctx context.Context, hash string) (*doma
 	var key domain.APIKey
 	var scopes sql.NullString
 	var orgID sql.NullString
+	var zoneID sql.NullString
+	var mode sql.NullString
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, user_id, org_id, key_prefix, environment, scopes, revoked_at FROM api_keys WHERE key_hash = $1",
-		hash).Scan(&key.ID, &key.UserID, &orgID, &key.KeyPrefix, &key.Environment, &scopes, &key.RevokedAt)
+		"SELECT id, user_id, org_id, zone_id, mode, key_prefix, environment, scopes, revoked_at FROM api_keys WHERE key_hash = $1",
+		hash).Scan(&key.ID, &key.UserID, &orgID, &zoneID, &mode, &key.KeyPrefix, &key.Environment, &scopes, &key.RevokedAt)
 	key.OrgID = orgID.String
+	key.ZoneID = zoneID.String
+	key.Mode = mode.String
 	key.Scopes = scopes.String
 	if key.Scopes == "" {
 		key.Scopes = "*"

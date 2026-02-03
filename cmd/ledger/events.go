@@ -16,6 +16,8 @@ type PaymentEvent struct {
 		Amount   int64  `json:"amount"`
 		Currency string `json:"currency"`
 		UserID   string `json:"user_id"`
+		ZoneID   string `json:"zone_id"`
+		Mode     string `json:"mode"`
 	} `json:"data"`
 }
 
@@ -75,7 +77,7 @@ func StartKafkaConsumer(brokers []string, service *domain.LedgerService) {
 		}
 
 		ctx := context.Background()
-		if err := service.RecordTransaction(ctx, txReq); err != nil {
+		if err := service.RecordTransaction(ctx, txReq, event.Data.ZoneID, event.Data.Mode); err != nil {
 			log.Printf("Failed to record transaction for event %s (ID: %s): %v", event.Type, event.Data.ID, err)
 			return err
 		}

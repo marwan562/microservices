@@ -7,12 +7,13 @@
 package auth
 
 import (
-	_ "google.golang.org/genproto/googleapis/api/annotations"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	_ "google.golang.org/genproto/googleapis/api/annotations"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -75,6 +76,8 @@ type ValidateKeyResponse struct {
 	OrgId          string                 `protobuf:"bytes,5,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
 	Role           string                 `protobuf:"bytes,6,opt,name=role,proto3" json:"role,omitempty"`
 	RateLimitQuota int32                  `protobuf:"varint,7,opt,name=rate_limit_quota,json=rateLimitQuota,proto3" json:"rate_limit_quota,omitempty"`
+	ZoneId         string                 `protobuf:"bytes,8,opt,name=zone_id,json=zoneId,proto3" json:"zone_id,omitempty"`
+	Mode           string                 `protobuf:"bytes,9,opt,name=mode,proto3" json:"mode,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -156,6 +159,20 @@ func (x *ValidateKeyResponse) GetRateLimitQuota() int32 {
 		return x.RateLimitQuota
 	}
 	return 0
+}
+
+func (x *ValidateKeyResponse) GetZoneId() string {
+	if x != nil {
+		return x.ZoneId
+	}
+	return ""
+}
+
+func (x *ValidateKeyResponse) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
 }
 
 type ValidateTokenRequest struct {

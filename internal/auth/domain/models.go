@@ -36,6 +36,8 @@ type APIKey struct {
 	ID             string     `json:"id"`
 	UserID         string     `json:"user_id"`
 	OrgID          string     `json:"org_id,omitempty"`
+	ZoneID         string     `json:"zone_id,omitempty"` // Zone this key belongs to
+	Mode           string     `json:"mode,omitempty"`    // 'test' or 'live'
 	KeyPrefix      string     `json:"key_prefix"`
 	KeyHash        string     `json:"-"`
 	TruncatedKey   string     `json:"truncated_key"`

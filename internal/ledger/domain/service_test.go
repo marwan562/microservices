@@ -47,7 +47,7 @@ func TestRecordTransaction_TableDriven(t *testing.T) {
 			tt.mockSetup(mockRepo)
 			service := NewLedgerService(mockRepo, nil)
 
-			err := service.RecordTransaction(context.Background(), tt.req)
+			err := service.RecordTransaction(context.Background(), tt.req, "zone_123", "test")
 			if tt.expectedErr != "" {
 				if err == nil || err.Error() != tt.expectedErr {
 					t.Errorf("Expected error '%s', got '%v'", tt.expectedErr, err)
@@ -96,7 +96,7 @@ func TestCreateAccount_TableDriven(t *testing.T) {
 			tt.mockSetup(mockRepo)
 			service := NewLedgerService(mockRepo, nil)
 
-			acc, err := service.CreateAccount(context.Background(), tt.accName, Asset, "USD", nil)
+			acc, err := service.CreateAccount(context.Background(), tt.accName, Asset, "USD", nil, "zone_123", "test")
 			if tt.expectedErr {
 				if err == nil {
 					t.Error("Expected error, got nil")

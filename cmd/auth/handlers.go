@@ -15,12 +15,15 @@ import (
 )
 
 type GenerateAPIKeyRequest struct {
+	ZoneID      string `json:"zone_id"`
 	Environment string `json:"environment"` // "test" or "live"
 }
 
 type GenerateAPIKeyResponse struct {
 	Key          string `json:"key"` // Full key shown ONLY once
 	Environment  string `json:"environment"`
+	ZoneID       string `json:"zone_id"`
+	Mode         string `json:"mode"`
 	TruncatedKey string `json:"truncated_key"`
 }
 
@@ -53,8 +56,8 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Environment != "test" && req.Environment != "live" {
-		jsonutil.WriteErrorJSON(w, "Invalid environment (use 'test' or 'live')")
+	if req.ZoneID == "" {
+		jsonutil.WriteErrorJSON(w, "zone_id is required")
 		return
 	}
 
@@ -69,6 +72,9 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	key := &domain.APIKey{
 		UserID:       userID,
+		OrgID:        "", // Optional, will be linked via zone or user
+		ZoneID:       req.ZoneID,
+		Mode:         req.Environment,
 		KeyPrefix:    prefix,
 		KeyHash:      hash,
 		TruncatedKey: truncated,
@@ -76,7 +82,8 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.CreateAPIKey(r.Context(), key); err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to save API key")
+		log.Printf("Failed to save API key: %v", err)
+		jsonutil.WriteErrorJSON(w, "Failed to save API key (verify zone_id)")
 		return
 	}
 
@@ -84,6 +91,8 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 	jsonutil.WriteJSON(w, http.StatusCreated, GenerateAPIKeyResponse{
 		Key:          fullKey,
 		Environment:  req.Environment,
+		ZoneID:       req.ZoneID,
+		Mode:         req.Environment,
 		TruncatedKey: truncated,
 	})
 }
@@ -95,6 +104,9 @@ type ValidateAPIKeyRequest struct {
 type ValidateAPIKeyResponse struct {
 	Valid       bool   `json:"valid"`
 	UserID      string `json:"user_id"`
+	OrgID       string `json:"org_id"`
+	ZoneID      string `json:"zone_id"`
+	Mode        string `json:"mode"`
 	Environment string `json:"environment"`
 	Scopes      string `json:"scopes"`
 }
@@ -121,6 +133,9 @@ func (h *AuthHandler) ValidateAPIKey(w http.ResponseWriter, r *http.Request) {
 	jsonutil.WriteJSON(w, http.StatusOK, ValidateAPIKeyResponse{
 		Valid:       true,
 		UserID:      key.UserID,
+		OrgID:       key.OrgID,
+		ZoneID:      key.ZoneID,
+		Mode:        key.Mode,
 		Environment: key.Environment,
 		Scopes:      key.Scopes,
 	})

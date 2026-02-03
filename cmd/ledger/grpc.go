@@ -38,7 +38,7 @@ func (s *LedgerGRPCServer) RecordTransaction(ctx context.Context, req *pb.Record
 		Entries:     []domain.EntryRequest{entry, balancingEntry},
 	}
 
-	err := s.service.RecordTransaction(ctx, txReq)
+	err := s.service.RecordTransaction(ctx, txReq, req.ZoneId, req.Mode)
 	if err != nil {
 		log.Printf("GRPC RecordTransaction error: %v", err)
 		return nil, err

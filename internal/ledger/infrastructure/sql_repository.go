@@ -19,8 +19,8 @@ func NewSQLRepository(db *sql.DB) *SQLRepository {
 
 func (r *SQLRepository) CreateAccount(ctx context.Context, acc *domain.Account) error {
 	err := r.db.QueryRowContext(ctx,
-		`INSERT INTO accounts (name, type, currency, user_id) VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
-		acc.Name, acc.Type, acc.Currency, acc.UserID).Scan(&acc.ID, &acc.CreatedAt)
+		`INSERT INTO accounts (name, type, currency, user_id, zone_id, mode) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
+		acc.Name, acc.Type, acc.Currency, acc.UserID, acc.ZoneID, acc.Mode).Scan(&acc.ID, &acc.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create account: %w", err)
 	}
@@ -30,12 +30,12 @@ func (r *SQLRepository) CreateAccount(ctx context.Context, acc *domain.Account) 
 func (r *SQLRepository) GetAccount(ctx context.Context, id string) (*domain.Account, error) {
 	acc := &domain.Account{}
 	err := r.db.QueryRowContext(ctx,
-		`SELECT a.id, a.name, a.type, a.currency, COALESCE(SUM(e.amount), 0) as balance, a.user_id, a.created_at 
+		`SELECT a.id, a.name, a.type, a.currency, COALESCE(SUM(e.amount), 0) as balance, a.user_id, a.created_at, a.zone_id, a.mode 
 		 FROM accounts a 
 		 LEFT JOIN entries e ON a.id = e.account_id 
 		 WHERE a.id = $1 
-		 GROUP BY a.id`,
-		id).Scan(&acc.ID, &acc.Name, &acc.Type, &acc.Currency, &acc.Balance, &acc.UserID, &acc.CreatedAt)
+		 GROUP BY a.id, a.zone_id, a.mode`,
+		id).Scan(&acc.ID, &acc.Name, &acc.Type, &acc.Currency, &acc.Balance, &acc.UserID, &acc.CreatedAt, &acc.ZoneID, &acc.Mode)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -85,8 +85,8 @@ type sqlTxContext struct {
 func (c *sqlTxContext) CreateTransaction(ctx context.Context, tx *domain.Transaction) (string, error) {
 	var id string
 	err := c.tx.QueryRowContext(ctx,
-		`INSERT INTO transactions (reference_id, description) VALUES ($1, $2) RETURNING id`,
-		tx.ReferenceID, tx.Description).Scan(&id)
+		`INSERT INTO transactions (reference_id, description, zone_id, mode) VALUES ($1, $2, $3, $4) RETURNING id`,
+		tx.ReferenceID, tx.Description, tx.ZoneID, tx.Mode).Scan(&id)
 	return id, err
 }
 

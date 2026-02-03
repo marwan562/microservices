@@ -71,14 +71,14 @@ func NewGatewayHandler(auth, payment, ledger, wallet, billing, notification stri
 }
 
 // validateKeyWithAuthService calls the Auth service to validate the API key hash.
-func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, string, string, int32, bool) {
+func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, string, string, int32, string, string, bool) {
 	res, err := h.authClient.ValidateKey(ctx, &pb.ValidateKeyRequest{KeyHash: keyHash})
 	if err != nil {
 		log.Printf("Auth service gRPC validation call failed: %v", err)
-		return "", "", "", "", "", 0, false
+		return "", "", "", "", "", 0, "", "", false
 	}
 
-	return res.UserId, res.Environment, res.Scopes, res.OrgId, res.Role, res.RateLimitQuota, res.Valid
+	return res.UserId, res.Environment, res.Scopes, res.OrgId, res.Role, res.RateLimitQuota, res.ZoneId, res.Mode, res.Valid
 }
 
 // checkRateLimit checks if the key has exceeded its quota.
@@ -125,6 +125,12 @@ func (h *GatewayHandler) proxyRequest(target string, w http.ResponseWriter, r *h
 		if orgID := r.Header.Get("X-Org-ID"); orgID != "" {
 			req.Header.Set("X-Org-ID", orgID)
 		}
+		if zoneID := r.Header.Get("X-Zone-ID"); zoneID != "" {
+			req.Header.Set("X-Zone-ID", zoneID)
+		}
+		if mode := r.Header.Get("X-Zone-Mode"); mode != "" {
+			req.Header.Set("X-Zone-Mode", mode)
+		}
 	}
 
 	proxy.ServeHTTP(w, r)
@@ -160,7 +166,7 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	keyHash := apikey.HashKey(apiKey, h.hmacSecret)
 
 	// Validate with Auth Service
-	userID, env, keyScopes, orgID, role, quota, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
+	userID, env, keyScopes, orgID, role, quota, zoneID, mode, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
 	if !valid {
 		jsonutil.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid or revoked API Key"})
 		return
@@ -195,6 +201,8 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Set("X-Environment", env)
 	r.Header.Set("X-Org-ID", orgID)
 	r.Header.Set("X-Role", role)
+	r.Header.Set("X-Zone-ID", zoneID)
+	r.Header.Set("X-Zone-Mode", mode)
 
 	// Route to Service
 	switch {

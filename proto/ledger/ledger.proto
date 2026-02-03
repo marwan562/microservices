@@ -27,6 +27,8 @@ message RecordTransactionRequest {
   string currency = 3;
   string description = 4;
   string reference_id = 5; // e.g. PaymentIntent ID
+  string zone_id = 6;
+  string mode = 7;
 }
 
 message RecordTransactionResponse {

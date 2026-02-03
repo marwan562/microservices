@@ -7,6 +7,8 @@ import (
 // PaymentIntent represents a payment transaction intent.
 type PaymentIntent struct {
 	ID                   string    `json:"id"`
+	ZoneID               string    `json:"zone_id"`
+	Mode                 string    `json:"mode"`
 	Amount               int64     `json:"amount"` // In cents
 	Currency             string    `json:"currency"`
 	Status               string    `json:"status"` // requires_payment_method, succeeded, failed
