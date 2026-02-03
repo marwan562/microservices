@@ -101,13 +101,13 @@ Organization → Zone → Event → Flow → Action
 The next major evolution — transforming from a payment processor into a full automation platform.
 
 #### Core Zone Features
-- [ ] **Zone Management API** — CRUD for zones
-- [ ] **Test/Live Mode Isolation** — Separate keys, logs, flows
-- [ ] **Zone-Scoped Events** — Events bound to zones
+- [x] **Zone Management API** — CRUD for zones
+- [x] **Test/Live Mode Isolation** — Separate keys, logs, flows
+- [x] **Zone-Scoped Events** — Events bound to zones
 - [ ] **Zone Templates** — Quick-start configurations
 
 #### Flow Engine
-- [ ] **Visual Flow Builder** — Drag-and-drop UI
+- [/] **Visual Flow Builder** — Drag-and-drop UI (In progress)
 - [ ] **Event Triggers** — SDK, webhooks, schedule
 - [ ] **Logic Nodes** — Conditions, filters, approvals
 - [ ] **Action Nodes** — Webhooks, notifications, audit
@@ -118,7 +118,7 @@ The next major evolution — transforming from a payment processor into a full a
 - [ ] **Phase 3**: Full OPA-style engine
 
 #### Developer Tools
-- [ ] **CLI Enhancements** — Zone switching, event triggers
+- [x] **CLI Enhancements** — Zone switching, event triggers
 - [ ] **Debug Mode** — Real-time flow inspection
 - [ ] **Webhook Replay** — Re-trigger past events
 
