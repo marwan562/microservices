@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package flow;
+
+option go_package = "github.com/marwan562/fintech-ecosystem/proto/flow";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service FlowService {
+  rpc CreateFlow(CreateFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      post: "/v1/flows"
+      body: "*"
+    };
+  }
+
+  rpc GetFlow(GetFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      get: "/v1/flows/{id}"
+    };
+  }
+
+  rpc ListFlows(ListFlowsRequest) returns (ListFlowsResponse) {
+    option (google.api.http) = {
+      get: "/v1/flows"
+    };
+  }
+
+  rpc UpdateFlow(UpdateFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      put: "/v1/flows/{id}"
+      body: "*"
+    };
+  }
+
+  rpc BulkUpdateFlows(BulkUpdateFlowsRequest) returns (BulkUpdateFlowsResponse) {
+    option (google.api.http) = {
+      post: "/v1/flows/bulk-update"
+      body: "*"
+    };
+  }
+
+  // --- Debug & Execution ---
+
+  rpc GetExecution(GetExecutionRequest) returns (FlowExecution) {
+    option (google.api.http) = {
+      get: "/v1/flows/executions/{id}"
+    };
+  }
+
+  rpc ResumeExecution(ResumeExecutionRequest) returns (ResumeExecutionResponse) {
+    option (google.api.http) = {
+      post: "/v1/flows/executions/{execution_id}/resume"
+      body: "*"
+    };
+  }
+}
+
+message Flow {
+  string id = 1;
+  string zone_id = 2;
+  string name = 3;
+  bool enabled = 4;
+  string nodes_json = 5; // Simplified for dynamic nodes
+  string edges_json = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message FlowExecution {
+  string id = 1;
+  string flow_id = 2;
+  string status = 3; // "running", "completed", "failed", "paused"
+  string current_node_id = 4;
+  string input_json = 5;
+  string metadata_json = 6;
+  repeated ExecutionStep steps = 7;
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp finished_at = 9;
+}
+
+message ExecutionStep {
+  string node_id = 1;
+  string status = 2;
+  string input_json = 3;
+  string output_json = 4;
+  string error = 5;
+  google.protobuf.Timestamp started_at = 6;
+}
+
+message CreateFlowRequest {
+  string zone_id = 1;
+  string name = 2;
+  string nodes_json = 3;
+  string edges_json = 4;
+}
+
+message GetFlowRequest {
+  string id = 1;
+}
+
+message ListFlowsRequest {
+  string zone_id = 1;
+}
+
+message ListFlowsResponse {
+  repeated Flow flows = 1;
+}
+
+message UpdateFlowRequest {
+  string id = 1;
+  string name = 2;
+  bool enabled = 3;
+  string nodes_json = 4;
+  string edges_json = 5;
+}
+
+message BulkUpdateFlowsRequest {
+  repeated string flow_ids = 1;
+  bool enabled = 2;
+}
+
+message BulkUpdateFlowsResponse {
+  int32 updated_count = 1;
+}
+
+message GetExecutionRequest {
+  string id = 1;
+}
+
+message ResumeExecutionRequest {
+  string execution_id = 1;
+  string overrides_json = 2;
+}
+
+message ResumeExecutionResponse {
+  string status = 1;
+}

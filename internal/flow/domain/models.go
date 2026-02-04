@@ -83,4 +83,5 @@ type Repository interface {
 	CreateExecution(ctx context.Context, exec *FlowExecution) error
 	UpdateExecution(ctx context.Context, exec *FlowExecution) error
 	GetExecution(ctx context.Context, id string) (*FlowExecution, error)
+	BulkUpdateFlowsEnabled(ctx context.Context, ids []string, enabled bool) error
 }

@@ -100,3 +100,13 @@ func (r *SQLRepository) GetExecution(ctx context.Context, id string) (*domain.Fl
 	json.Unmarshal(stepsJS, &exec.Steps)
 	return &exec, nil
 }
+
+func (r *SQLRepository) BulkUpdateFlowsEnabled(ctx context.Context, ids []string, enabled bool) error {
+	for _, id := range ids {
+		_, err := r.db.ExecContext(ctx, "UPDATE flows SET enabled = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", enabled, id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

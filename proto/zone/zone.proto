@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package zone;
+
+option go_package = "github.com/marwan562/fintech-ecosystem/proto/zone";
+
+import "google/api/annotations.proto";
+
+service ZoneService {
+  rpc CreateZone(CreateZoneRequest) returns (Zone) {
+    option (google.api.http) = {
+      post: "/v1/zones"
+      body: "*"
+    };
+  }
+
+  rpc GetZone(GetZoneRequest) returns (Zone) {
+    option (google.api.http) = {
+      get: "/v1/zones/{id}"
+    };
+  }
+
+  rpc ListZones(ListZonesRequest) returns (ListZonesResponse) {
+    option (google.api.http) = {
+      get: "/v1/zones"
+    };
+  }
+
+  rpc UpdateZone(UpdateZoneRequest) returns (Zone) {
+    option (google.api.http) = {
+      put: "/v1/zones/{id}"
+      body: "*"
+    };
+  }
+
+  rpc BulkUpdateMetadata(BulkUpdateMetadataRequest) returns (BulkUpdateMetadataResponse) {
+    option (google.api.http) = {
+      post: "/v1/zones/bulk-metadata"
+      body: "*"
+    };
+  }
+}
+
+message Zone {
+  string id = 1;
+  string org_id = 2;
+  string name = 3;
+  string mode = 4; // "test" | "live"
+  string secret_key = 5;
+  string publishable_key = 6;
+  string status = 7;
+  string template_name = 8;
+  map<string, string> metadata = 9;
+  string created_at = 10;
+}
+
+message CreateZoneRequest {
+  string org_id = 1;
+  string name = 2;
+  string mode = 3;
+  string template_name = 4;
+  map<string, string> metadata = 5;
+}
+
+message GetZoneRequest {
+  string id = 1;
+}
+
+message ListZonesRequest {
+  string org_id = 1;
+}
+
+message ListZonesResponse {
+  repeated Zone zones = 1;
+}
+
+message UpdateZoneRequest {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+  map<string, string> metadata = 4;
+}
+
+message BulkUpdateMetadataRequest {
+  repeated string zone_ids = 1;
+  map<string, string> metadata = 2;
+}
+
+message BulkUpdateMetadataResponse {
+  int32 updated_count = 1;
+}

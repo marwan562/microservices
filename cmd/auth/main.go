@@ -73,7 +73,8 @@ func main() {
 	cachedRepo := infrastructure.NewCachedRepository(sqlRepo, rdb)
 	authService := domain.NewAuthService(cachedRepo)
 
-	zoneRepo := zoneInfra.NewSQLRepository(db)
+	zoneSQLRepo := zoneInfra.NewSQLRepository(db)
+	zoneRepo := zoneInfra.NewCachedRepository(zoneSQLRepo, rdb)
 	flowRepo := flowInfra.NewSQLRepository(db)
 
 	providers := zoneDomain.TemplateProviders{
@@ -193,6 +194,8 @@ func main() {
 
 	mux.HandleFunc("/flows/executions", flowHandler.GetExecution)
 	mux.HandleFunc("/flows/resume", flowHandler.ResumeExecution)
+	mux.HandleFunc("/flows/bulk-update", flowHandler.BulkUpdateFlows)
+	mux.HandleFunc("/zones/bulk-metadata", zoneHandler.BulkUpdateMetadata)
 
 	log.Println("Auth service HTTP starting on :8081")
 

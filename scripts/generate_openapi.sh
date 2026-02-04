@@ -9,6 +9,9 @@ cd "$(dirname "$0")/.."
 
 echo "Generating OpenAPI specs..."
 
+# Ensure GOPATH/bin is in PATH
+export PATH=$PATH:$(go env GOPATH)/bin
+
 # Check for protoc
 if ! command -v protoc &> /dev/null; then
     echo "protoc could not be found. Please install it."
@@ -18,7 +21,7 @@ fi
 # Check for protoc-gen-openapiv2
 if ! command -v protoc-gen-openapiv2 &> /dev/null; then
     echo "protoc-gen-openapiv2 could not be found. Installing..."
-    GO111MODULE=on go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+    GO111MODULE=on GOFLAGS="" go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
 fi
 
 # Run generation

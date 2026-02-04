@@ -175,9 +175,34 @@ migrations/   # Per-service SQL migrations
 
 ---
 
+---
+
+## 🛠 Official SDKs
+
+Get started quickly with our auto-generated, type-safe SDKs:
+
+- **[Node.js SDK](https://github.com/Sapliy/fintech-sdk-node)** — `npm install @sapliyio/fintech`
+- **[Go SDK](https://github.com/Sapliy/fintech-sdk-go)** — `go get github.com/sapliy/fintech-sdk-go`
+- **[Python SDK](https://github.com/Sapliy/fintech-sdk-python)** — `pip install sapliyio-fintech`
+
+Check out the [examples/](https://github.com/Sapliy/fintech-ecosystem/tree/main/examples) directory for real-world integration guides (e.g., E-commerce checkout, financial auditing).
+
+---
+
+## 🚀 Performance & Scalability
+
+Sapliy is built for high-throughput financial operations:
+
+- **Advanced Caching**: Redis-backed write-around caching for hot accounts and zone metadata.
+- **Batch Operations**: Bulk APIs for ledger transactions, flow toggling, and zone updates.
+- **Event-Driven**: Fully decoupled architecture using Kafka/Redpanda and RabbitMQ.
+- **Observability**: OpenTelemetry instrumentation and Prometheus metrics out-of-the-box.
+
+---
+
 ## Roadmap and contributing
 
-- **Roadmap** — Quality (tests, idempotency, layering), growth, and a path to hosted/paid offerings: [ROADMAP.md](ROADMAP.md).
+- **Roadmap** — SDK automation, Redis scaling, and Enterprise features: [ROADMAP.md](ROADMAP.md).
 - **Contributing** — Good first issues, commit style, and how to run tests: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---

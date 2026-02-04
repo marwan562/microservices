@@ -13,12 +13,13 @@ const (
 )
 
 type Zone struct {
-	ID        string    `json:"id"`
-	OrgID     string    `json:"org_id"`
-	Name      string    `json:"name"`
-	Mode      Mode      `json:"mode"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        string            `json:"id"`
+	OrgID     string            `json:"org_id"`
+	Name      string            `json:"name"`
+	Mode      Mode              `json:"mode"`
+	Metadata  map[string]string `json:"metadata"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 type CreateZoneParams struct {
@@ -26,12 +27,14 @@ type CreateZoneParams struct {
 	Name         string
 	Mode         Mode
 	TemplateName string
+	Metadata     map[string]string
 }
 
 type Repository interface {
 	Create(ctx context.Context, zone *Zone) error
 	GetByID(ctx context.Context, id string) (*Zone, error)
 	ListByOrgID(ctx context.Context, orgID string) ([]*Zone, error)
+	UpdateMetadata(ctx context.Context, id string, metadata map[string]string) error
 	Delete(ctx context.Context, id string) error
 }
 

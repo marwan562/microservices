@@ -18,6 +18,9 @@
       "name": "FraudService"
     },
     {
+      "name": "ZoneService"
+    },
+    {
       "name": "WalletService"
     },
     {
@@ -28,6 +31,9 @@
     },
     {
       "name": "BillingService"
+    },
+    {
+      "name": "FlowService"
     }
   ],
   "consumes": [
@@ -489,6 +495,264 @@
         ]
       }
     },
+    "/v1/flows": {
+      "get": {
+        "operationId": "FlowService_ListFlows",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/flowListFlowsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "zoneId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FlowService"
+        ]
+      },
+      "post": {
+        "operationId": "FlowService_CreateFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/flowFlow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/flowCreateFlowRequest"
+            }
+          }
+        ],
+        "tags": [
+          "FlowService"
+        ]
+      }
+    },
+    "/v1/flows/bulk-update": {
+      "post": {
+        "operationId": "FlowService_BulkUpdateFlows",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/flowBulkUpdateFlowsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/flowBulkUpdateFlowsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "FlowService"
+        ]
+      }
+    },
+    "/v1/flows/executions/{executionId}/resume": {
+      "post": {
+        "operationId": "FlowService_ResumeExecution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/flowResumeExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "executionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FlowServiceResumeExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "FlowService"
+        ]
+      }
+    },
+    "/v1/flows/executions/{id}": {
+      "get": {
+        "operationId": "FlowService_GetExecution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/flowFlowExecution"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FlowService"
+        ]
+      }
+    },
+    "/v1/flows/{id}": {
+      "get": {
+        "operationId": "FlowService_GetFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/flowFlow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FlowService"
+        ]
+      },
+      "put": {
+        "operationId": "FlowService_UpdateFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/flowFlow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FlowServiceUpdateFlowBody"
+            }
+          }
+        ],
+        "tags": [
+          "FlowService"
+        ]
+      }
+    },
+    "/v1/ledger/accounts": {
+      "post": {
+        "operationId": "LedgerService_CreateAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ledgerCreateAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ledgerCreateAccountRequest"
+            }
+          }
+        ],
+        "tags": [
+          "LedgerService"
+        ]
+      }
+    },
     "/v1/ledger/accounts/{accountId}": {
       "get": {
         "operationId": "LedgerService_GetAccount",
@@ -512,6 +776,38 @@
             "in": "path",
             "required": true,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "LedgerService"
+        ]
+      }
+    },
+    "/v1/ledger/bulk-transactions": {
+      "post": {
+        "operationId": "LedgerService_BulkRecordTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ledgerBulkRecordResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ledgerBulkRecordRequest"
+            }
           }
         ],
         "tags": [
@@ -910,11 +1206,194 @@
           "NotificationService"
         ]
       }
+    },
+    "/v1/zones": {
+      "get": {
+        "operationId": "ZoneService_ListZones",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/zoneListZonesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ZoneService"
+        ]
+      },
+      "post": {
+        "operationId": "ZoneService_CreateZone",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/zoneZone"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/zoneCreateZoneRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ZoneService"
+        ]
+      }
+    },
+    "/v1/zones/bulk-metadata": {
+      "post": {
+        "operationId": "ZoneService_BulkUpdateMetadata",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/zoneBulkUpdateMetadataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/zoneBulkUpdateMetadataRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ZoneService"
+        ]
+      }
+    },
+    "/v1/zones/{id}": {
+      "get": {
+        "operationId": "ZoneService_GetZone",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/zoneZone"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ZoneService"
+        ]
+      },
+      "put": {
+        "operationId": "ZoneService_UpdateZone",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/zoneZone"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ZoneServiceUpdateZoneBody"
+            }
+          }
+        ],
+        "tags": [
+          "ZoneService"
+        ]
+      }
     }
   },
   "definitions": {
     "BillingServiceCancelSubscriptionBody": {
       "type": "object"
+    },
+    "FlowServiceResumeExecutionBody": {
+      "type": "object",
+      "properties": {
+        "overridesJson": {
+          "type": "string"
+        }
+      }
+    },
+    "FlowServiceUpdateFlowBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "nodesJson": {
+          "type": "string"
+        },
+        "edgesJson": {
+          "type": "string"
+        }
+      }
     },
     "PaymentServiceConfirmPaymentIntentBody": {
       "type": "object",
@@ -926,6 +1405,23 @@
     },
     "PaymentServiceRefundPaymentIntentBody": {
       "type": "object"
+    },
+    "ZoneServiceUpdateZoneBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
     },
     "authAddTeamMemberRequest": {
       "type": "object",
@@ -1127,6 +1623,12 @@
         "rateLimitQuota": {
           "type": "integer",
           "format": "int32"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
         }
       }
     },
@@ -1225,6 +1727,217 @@
         }
       }
     },
+    "flowBulkUpdateFlowsRequest": {
+      "type": "object",
+      "properties": {
+        "flowIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "flowBulkUpdateFlowsResponse": {
+      "type": "object",
+      "properties": {
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "flowCreateFlowRequest": {
+      "type": "object",
+      "properties": {
+        "zoneId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nodesJson": {
+          "type": "string"
+        },
+        "edgesJson": {
+          "type": "string"
+        }
+      }
+    },
+    "flowExecutionStep": {
+      "type": "object",
+      "properties": {
+        "nodeId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "inputJson": {
+          "type": "string"
+        },
+        "outputJson": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "flowFlow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "nodesJson": {
+          "type": "string",
+          "title": "Simplified for dynamic nodes"
+        },
+        "edgesJson": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "flowFlowExecution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "flowId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "\"running\", \"completed\", \"failed\", \"paused\""
+        },
+        "currentNodeId": {
+          "type": "string"
+        },
+        "inputJson": {
+          "type": "string"
+        },
+        "metadataJson": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/flowExecutionStep"
+          }
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "flowListFlowsResponse": {
+      "type": "object",
+      "properties": {
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/flowFlow"
+          }
+        }
+      }
+    },
+    "flowResumeExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "ledgerBulkRecordRequest": {
+      "type": "object",
+      "properties": {
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/ledgerRecordTransactionRequest"
+          }
+        }
+      }
+    },
+    "ledgerBulkRecordResponse": {
+      "type": "object",
+      "properties": {
+        "responses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/ledgerRecordTransactionResponse"
+          }
+        }
+      }
+    },
+    "ledgerCreateAccountRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "title": "e.g. \"asset\", \"liability\", \"revenue\", \"expense\""
+        },
+        "currency": {
+          "type": "string"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        }
+      }
+    },
+    "ledgerCreateAccountResponse": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
     "ledgerGetAccountResponse": {
       "type": "object",
       "properties": {
@@ -1264,6 +1977,12 @@
         "referenceId": {
           "type": "string",
           "title": "e.g. PaymentIntent ID"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
         }
       }
     },
@@ -1544,6 +2263,106 @@
           "format": "int64"
         },
         "currency": {
+          "type": "string"
+        }
+      }
+    },
+    "zoneBulkUpdateMetadataRequest": {
+      "type": "object",
+      "properties": {
+        "zoneIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "zoneBulkUpdateMetadataResponse": {
+      "type": "object",
+      "properties": {
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "zoneCreateZoneRequest": {
+      "type": "object",
+      "properties": {
+        "orgId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "templateName": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "zoneListZonesResponse": {
+      "type": "object",
+      "properties": {
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/zoneZone"
+          }
+        }
+      }
+    },
+    "zoneZone": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "title": "\"test\" | \"live\""
+        },
+        "secretKey": {
+          "type": "string"
+        },
+        "publishableKey": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "templateName": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
           "type": "string"
         }
       }

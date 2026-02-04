@@ -113,3 +113,21 @@ func (h *FlowHandler) UpdateFlow(w http.ResponseWriter, r *http.Request) {
 
 	jsonutil.WriteJSON(w, http.StatusOK, flow)
 }
+
+func (h *FlowHandler) BulkUpdateFlows(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs     []string `json:"ids"`
+		Enabled bool     `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if err := h.repo.BulkUpdateFlowsEnabled(r.Context(), req.IDs, req.Enabled); err != nil {
+		jsonutil.WriteErrorJSON(w, err.Error())
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}

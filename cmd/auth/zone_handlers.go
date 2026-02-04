@@ -84,3 +84,26 @@ func (h *ZoneHandler) GetZone(w http.ResponseWriter, r *http.Request) {
 
 	jsonutil.WriteJSON(w, http.StatusOK, z)
 }
+
+type BulkUpdateMetadataRequest struct {
+	ZoneIDs  []string          `json:"zone_ids"`
+	Metadata map[string]string `json:"metadata"`
+}
+
+func (h *ZoneHandler) BulkUpdateMetadata(w http.ResponseWriter, r *http.Request) {
+	var req BulkUpdateMetadataRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	count, err := h.service.BulkUpdateMetadata(r.Context(), req.ZoneIDs, req.Metadata)
+	if err != nil {
+		jsonutil.WriteErrorJSON(w, "Failed to update metadata")
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"updated_count": count,
+	})
+}

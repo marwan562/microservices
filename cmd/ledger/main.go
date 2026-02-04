@@ -15,6 +15,7 @@ import (
 	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
 	"github.com/marwan562/fintech-ecosystem/pkg/observability"
 	pb "github.com/marwan562/fintech-ecosystem/proto/ledger"
+	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/marwan562/fintech-ecosystem/pkg/messaging"
@@ -48,8 +49,21 @@ func main() {
 		}()
 	}
 
+	// Initialize Redis for Caching
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Printf("Warning: Redis connection failed in Ledger: %v", err)
+	}
+
 	// Layered Architecture Setup
-	repo := infrastructure.NewSQLRepository(db)
+	sqlRepo := infrastructure.NewSQLRepository(db)
+	repo := infrastructure.NewCachedRepository(sqlRepo, rdb)
 	metrics := &infrastructure.PrometheusMetrics{}
 	service := domain.NewLedgerService(repo, metrics)
 

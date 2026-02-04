@@ -37,6 +37,7 @@ func (s *Service) CreateZone(ctx context.Context, params domain.CreateZoneParams
 		OrgID:     params.OrgID,
 		Name:      params.Name,
 		Mode:      params.Mode,
+		Metadata:  params.Metadata,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -68,4 +69,14 @@ func (s *Service) ListZones(ctx context.Context, orgID string) ([]*domain.Zone, 
 
 func (s *Service) DeleteZone(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *Service) BulkUpdateMetadata(ctx context.Context, zoneIDs []string, metadata map[string]string) (int, error) {
+	count := 0
+	for _, id := range zoneIDs {
+		if err := s.repo.UpdateMetadata(ctx, id, metadata); err == nil {
+			count++
+		}
+	}
+	return count, nil
 }
