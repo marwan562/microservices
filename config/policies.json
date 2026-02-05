@@ -1,0 +1,27 @@
+{
+    "roles": {
+        "admin": {
+            "permissions": [
+                "*"
+            ]
+        },
+        "finance": {
+            "permissions": [
+                "payment.create",
+                "refund.create",
+                "flow.deploy",
+                "flow.deploy.live"
+            ]
+        },
+        "developer": {
+            "permissions": [
+                "zone.create",
+                "flow.deploy",
+                "key.create"
+            ]
+        },
+        "viewer": {
+            "permissions": []
+        }
+    }
+}
