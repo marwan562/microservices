@@ -33,6 +33,7 @@ billing-service
 connect-service
 wallet-service
 events-service
+events-srv
 bin/
 
 # local dependencies
