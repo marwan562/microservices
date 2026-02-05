@@ -29,10 +29,9 @@ type Flow struct {
 
 type Node struct {
 	ID       string          `json:"id"`
-	Type     NodeType        `json:"type"`
-	Subtype  string          `json:"subtype"`  // e.g. "payment.succeeded", "condition", "webhook"
+	Type     string          `json:"type"`     // React Flow type (e.g. "eventTrigger", "condition")
 	Position json.RawMessage `json:"position"` // React Flow position
-	Config   json.RawMessage `json:"config"`   // Node-specific configuration
+	Data     json.RawMessage `json:"data"`     // React Flow data (node configuration)
 }
 
 type Edge struct {

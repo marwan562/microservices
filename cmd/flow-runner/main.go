@@ -9,11 +9,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/marwan562/fintech-ecosystem/internal/flow/domain"
-	"github.com/marwan562/fintech-ecosystem/internal/flow/infrastructure"
-	"github.com/marwan562/fintech-ecosystem/pkg/database"
-	"github.com/marwan562/fintech-ecosystem/pkg/messaging"
-	"github.com/marwan562/fintech-ecosystem/pkg/observability"
+	"github.com/sapliy/fintech-ecosystem/internal/flow/domain"
+	"github.com/sapliy/fintech-ecosystem/internal/flow/infrastructure"
+	"github.com/sapliy/fintech-ecosystem/pkg/database"
+	"github.com/sapliy/fintech-ecosystem/pkg/messaging"
+	"github.com/sapliy/fintech-ecosystem/pkg/observability"
 )
 
 func main() {

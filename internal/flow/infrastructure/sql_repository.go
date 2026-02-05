@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/marwan562/fintech-ecosystem/internal/flow/domain"
+	"github.com/sapliy/fintech-ecosystem/internal/flow/domain"
 )
 
 type SQLRepository struct {

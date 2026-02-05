@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
-	"github.com/marwan562/fintech-ecosystem/pkg/bcryptutil"
+	"github.com/sapliy/fintech-ecosystem/internal/auth/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/bcryptutil"
 )
 
 func TestAuthHandler_Login(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/marwan562/fintech-ecosystem/internal/ledger/domain"
-	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
+	"github.com/sapliy/fintech-ecosystem/internal/ledger/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
 )
 
 type LedgerHandler struct {

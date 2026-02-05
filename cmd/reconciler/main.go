@@ -8,8 +8,8 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/marwan562/fintech-ecosystem/pkg/database"
-	"github.com/marwan562/fintech-ecosystem/pkg/monitoring"
+	"github.com/sapliy/fintech-ecosystem/pkg/database"
+	"github.com/sapliy/fintech-ecosystem/pkg/monitoring"
 )
 
 func main() {

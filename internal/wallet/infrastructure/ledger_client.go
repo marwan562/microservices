@@ -3,7 +3,7 @@ package infrastructure
 import (
 	"context"
 
-	pb "github.com/marwan562/fintech-ecosystem/proto/ledger"
+	pb "github.com/sapliy/fintech-ecosystem/proto/ledger"
 )
 
 type LedgerClient struct {

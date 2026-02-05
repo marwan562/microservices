@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
-	pb "github.com/marwan562/fintech-ecosystem/proto/auth"
+	"github.com/sapliy/fintech-ecosystem/internal/auth/domain"
+	pb "github.com/sapliy/fintech-ecosystem/proto/auth"
 )
 
 type AuthGRPCServer struct {

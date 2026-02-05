@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/auth/domain"
-	"github.com/marwan562/fintech-ecosystem/pkg/apikey"
-	"github.com/marwan562/fintech-ecosystem/pkg/bcryptutil"
-	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
-	"github.com/marwan562/fintech-ecosystem/pkg/jwtutil"
+	"github.com/sapliy/fintech-ecosystem/internal/auth/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/apikey"
+	"github.com/sapliy/fintech-ecosystem/pkg/bcryptutil"
+	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
+	"github.com/sapliy/fintech-ecosystem/pkg/jwtutil"
 )
 
 type GenerateAPIKeyRequest struct {

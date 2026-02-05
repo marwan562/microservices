@@ -7,13 +7,14 @@
 package ledger
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -541,7 +542,7 @@ const file_proto_ledger_ledger_proto_rawDesc = "" +
 	"\x11RecordTransaction\x12 .ledger.RecordTransactionRequest\x1a!.ledger.RecordTransactionResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/ledger/transactions\x12l\n" +
 	"\rCreateAccount\x12\x1c.ledger.CreateAccountRequest\x1a\x1d.ledger.CreateAccountResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/ledger/accounts\x12m\n" +
 	"\n" +
-	"GetAccount\x12\x19.ledger.GetAccountRequest\x1a\x1a.ledger.GetAccountResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/ledger/accounts/{account_id}B5Z3github.com/marwan562/fintech-ecosystem/proto/ledgerb\x06proto3"
+	"GetAccount\x12\x19.ledger.GetAccountRequest\x1a\x1a.ledger.GetAccountResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/ledger/accounts/{account_id}B5Z3github.com/sapliy/fintech-ecosystem/proto/ledgerb\x06proto3"
 
 var (
 	file_proto_ledger_ledger_proto_rawDescOnce sync.Once

@@ -7,12 +7,13 @@
 package wallet
 
 import (
-	_ "google.golang.org/genproto/googleapis/api/annotations"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	_ "google.golang.org/genproto/googleapis/api/annotations"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -417,7 +418,7 @@ const file_proto_wallet_wallet_proto_rawDesc = "" +
 	"\fCreateWallet\x12\x1b.wallet.CreateWalletRequest\x1a\x0e.wallet.Wallet\"\x16\x82\xd3\xe4\x93\x02\x10:\x01*\"\v/v1/wallets\x12T\n" +
 	"\tGetWallet\x12\x18.wallet.GetWalletRequest\x1a\x0e.wallet.Wallet\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/wallets/{user_id}\x12Y\n" +
 	"\x05TopUp\x12\x14.wallet.TopUpRequest\x1a\x1b.wallet.TransactionResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/wallets/top-up\x12a\n" +
-	"\bTransfer\x12\x17.wallet.TransferRequest\x1a\x1b.wallet.TransactionResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/wallets/transferB5Z3github.com/marwan562/fintech-ecosystem/proto/walletb\x06proto3"
+	"\bTransfer\x12\x17.wallet.TransferRequest\x1a\x1b.wallet.TransactionResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/wallets/transferB5Z3github.com/sapliy/fintech-ecosystem/proto/walletb\x06proto3"
 
 var (
 	file_proto_wallet_wallet_proto_rawDescOnce sync.Once

@@ -1,4 +1,4 @@
-module github.com/marwan562/fintech-ecosystem
+module github.com/sapliy/fintech-ecosystem
 
 go 1.24.6
 

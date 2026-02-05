@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/marwan562/fintech-ecosystem/internal/policy"
+	"github.com/sapliy/fintech-ecosystem/internal/policy"
 )
 
 // PolicyEngine handles RBAC checks by wrapping the unified policy engine.

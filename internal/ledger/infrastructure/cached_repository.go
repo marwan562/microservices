@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/ledger/domain"
 	"github.com/redis/go-redis/v9"
+	"github.com/sapliy/fintech-ecosystem/internal/ledger/domain"
 )
 
 type CachedRepository struct {

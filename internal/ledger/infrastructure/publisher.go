@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/ledger/domain"
-	"github.com/marwan562/fintech-ecosystem/pkg/messaging"
+	"github.com/sapliy/fintech-ecosystem/internal/ledger/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/messaging"
 )
 
 type OutboxPublisher struct {

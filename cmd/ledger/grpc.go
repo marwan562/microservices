@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/marwan562/fintech-ecosystem/internal/ledger/domain"
-	pb "github.com/marwan562/fintech-ecosystem/proto/ledger"
+	"github.com/sapliy/fintech-ecosystem/internal/ledger/domain"
+	pb "github.com/sapliy/fintech-ecosystem/proto/ledger"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

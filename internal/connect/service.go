@@ -3,7 +3,7 @@ package connect
 import (
 	"context"
 
-	pb "github.com/marwan562/fintech-ecosystem/proto/connect"
+	pb "github.com/sapliy/fintech-ecosystem/proto/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

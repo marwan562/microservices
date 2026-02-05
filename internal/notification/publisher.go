@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/marwan562/fintech-ecosystem/pkg/messaging"
+	"github.com/sapliy/fintech-ecosystem/pkg/messaging"
 )
 
 // EventPublisher publishes business events to Kafka

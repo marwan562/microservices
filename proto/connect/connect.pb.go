@@ -7,12 +7,13 @@
 package connect
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -499,7 +500,7 @@ const file_proto_connect_connect_proto_rawDesc = "" +
 	"\rCreateAccount\x12\x1d.connect.CreateAccountRequest\x1a\x10.connect.Account\x12:\n" +
 	"\n" +
 	"GetAccount\x12\x1a.connect.GetAccountRequest\x1a\x10.connect.Account\x12@\n" +
-	"\rUpdateAccount\x12\x1d.connect.UpdateAccountRequest\x1a\x10.connect.AccountB6Z4github.com/marwan562/fintech-ecosystem/proto/connectb\x06proto3"
+	"\rUpdateAccount\x12\x1d.connect.UpdateAccountRequest\x1a\x10.connect.AccountB6Z4github.com/sapliy/fintech-ecosystem/proto/connectb\x06proto3"
 
 var (
 	file_proto_connect_connect_proto_rawDescOnce sync.Once

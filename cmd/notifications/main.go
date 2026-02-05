@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/notification"
-	"github.com/marwan562/fintech-ecosystem/pkg/database"
-	"github.com/marwan562/fintech-ecosystem/pkg/messaging"
-	"github.com/marwan562/fintech-ecosystem/pkg/monitoring"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/redis/go-redis/v9"
+	"github.com/sapliy/fintech-ecosystem/internal/notification"
+	"github.com/sapliy/fintech-ecosystem/pkg/database"
+	"github.com/sapliy/fintech-ecosystem/pkg/messaging"
+	"github.com/sapliy/fintech-ecosystem/pkg/monitoring"
 )
 
 var (

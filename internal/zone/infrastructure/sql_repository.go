@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/marwan562/fintech-ecosystem/internal/zone/domain"
+	"github.com/sapliy/fintech-ecosystem/internal/zone/domain"
 )
 
 type SQLRepository struct {

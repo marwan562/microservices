@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/marwan562/fintech-ecosystem/internal/zone"
-	"github.com/marwan562/fintech-ecosystem/internal/zone/domain"
-	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
+	"github.com/sapliy/fintech-ecosystem/internal/zone"
+	"github.com/sapliy/fintech-ecosystem/internal/zone/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
 )
 
 type ZoneHandler struct {

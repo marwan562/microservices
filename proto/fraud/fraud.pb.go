@@ -7,11 +7,12 @@
 package fraud
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -343,7 +344,7 @@ const file_proto_fraud_fraud_proto_rawDesc = "" +
 	"\fFraudService\x12=\n" +
 	"\x10CheckTransaction\x12\x13.fraud.FraudRequest\x1a\x14.fraud.FraudResponse\x124\n" +
 	"\n" +
-	"ReportRisk\x12\x11.fraud.RiskReport\x1a\x13.fraud.RiskResponseB4Z2github.com/marwan562/fintech-ecosystem/proto/fraudb\x06proto3"
+	"ReportRisk\x12\x11.fraud.RiskReport\x1a\x13.fraud.RiskResponseB4Z2github.com/sapliy/fintech-ecosystem/proto/fraudb\x06proto3"
 
 var (
 	file_proto_fraud_fraud_proto_rawDescOnce sync.Once

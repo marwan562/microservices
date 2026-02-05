@@ -5,9 +5,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/marwan562/fintech-ecosystem/internal/connect"
-	"github.com/marwan562/fintech-ecosystem/pkg/database"
-	pb "github.com/marwan562/fintech-ecosystem/proto/connect"
+	"github.com/sapliy/fintech-ecosystem/internal/connect"
+	"github.com/sapliy/fintech-ecosystem/pkg/database"
+	pb "github.com/sapliy/fintech-ecosystem/proto/connect"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

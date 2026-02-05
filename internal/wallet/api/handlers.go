@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/marwan562/fintech-ecosystem/internal/wallet/domain"
-	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
-	pb "github.com/marwan562/fintech-ecosystem/proto/wallet"
+	"github.com/sapliy/fintech-ecosystem/internal/wallet/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
+	pb "github.com/sapliy/fintech-ecosystem/proto/wallet"
 )
 
 type WalletHandler struct {

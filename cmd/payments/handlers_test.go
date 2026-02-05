@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/marwan562/fintech-ecosystem/internal/payment/domain"
+	"github.com/sapliy/fintech-ecosystem/internal/payment/domain"
 )
 
 func TestPaymentHandler_CreatePaymentIntent(t *testing.T) {

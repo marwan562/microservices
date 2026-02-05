@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/marwan562/fintech-ecosystem/internal/dashboard"
-	"github.com/marwan562/fintech-ecosystem/pkg/jsonutil"
+	"github.com/sapliy/fintech-ecosystem/internal/dashboard"
+	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
 )
 
 func main() {

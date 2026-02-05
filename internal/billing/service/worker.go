@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/billing/domain"
+	"github.com/sapliy/fintech-ecosystem/internal/billing/domain"
 )
 
 type PaymentClient interface {

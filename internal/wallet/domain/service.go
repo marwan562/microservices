@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/marwan562/fintech-ecosystem/proto/ledger"
-	walletpb "github.com/marwan562/fintech-ecosystem/proto/wallet"
+	pb "github.com/sapliy/fintech-ecosystem/proto/ledger"
+	walletpb "github.com/sapliy/fintech-ecosystem/proto/wallet"
 )
 
 type LedgerClient interface {

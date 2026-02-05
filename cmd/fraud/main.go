@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/marwan562/fintech-ecosystem/internal/fraud"
-	"github.com/marwan562/fintech-ecosystem/pkg/messaging"
-	"github.com/marwan562/fintech-ecosystem/pkg/monitoring"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/sapliy/fintech-ecosystem/internal/fraud"
+	"github.com/sapliy/fintech-ecosystem/pkg/messaging"
+	"github.com/sapliy/fintech-ecosystem/pkg/monitoring"
 )
 
 var (
