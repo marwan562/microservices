@@ -24,7 +24,7 @@ openapi-generator-cli generate -i "$SWAGGER_FILE" -g typescript-axios -o ../fint
 echo "Generating Go SDK..."
 mkdir -p ../fintech-sdk-go/generated
 openapi-generator-cli generate -i "$SWAGGER_FILE" -g go -o ../fintech-sdk-go/generated \
-  --additional-properties=packageName=generated,enumClassPrefix=true \
+  --additional-properties=packageName=generated,enumClassPrefix=true,withGoMod=false \
   --git-host github.com --git-user-id sapliy --git-repo-id fintech-sdk-go
 
 # Fix GIT_USER_ID/GIT_REPO_ID placeholders in generated tests
@@ -33,6 +33,15 @@ sed -i '' 's/github.com\/GIT_USER_ID\/GIT_REPO_ID/github.com\/sapliy\/fintech-sd
 # --- Python ---
 echo "Generating Python SDK..."
 mkdir -p ../fintech-sdk-python/sapliy_fintech/generated
-openapi-generator-cli generate -i "$SWAGGER_FILE" -g python -o ../fintech-sdk-python/sapliy_fintech/generated --additional-properties=packageName=sapliy_fintech.generated
+openapi-generator-cli generate -i "$SWAGGER_FILE" -g python -o ../fintech-sdk-python/sapliy_fintech/generated \
+  --additional-properties=packageName=sapliy_fintech.generated
+
+# Clean up redundant project files from generated sub-dirs (conflicts with parent wrappers)
+rm -f ../fintech-sdk-go/generated/go.mod ../fintech-sdk-go/generated/go.sum 2>/dev/null || true
+rm -f ../fintech-sdk-python/sapliy_fintech/generated/pyproject.toml \
+      ../fintech-sdk-python/sapliy_fintech/generated/setup.py \
+      ../fintech-sdk-python/sapliy_fintech/generated/setup.cfg \
+      ../fintech-sdk-python/sapliy_fintech/generated/requirements.txt \
+      ../fintech-sdk-python/sapliy_fintech/generated/README.md 2>/dev/null || true
 
 echo "SDK generation complete."
