@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -44,3 +45,9 @@ type Service interface {
 	ListZones(ctx context.Context, orgID string) ([]*Zone, error)
 	DeleteZone(ctx context.Context, id string) error
 }
+
+// Errors
+var (
+	ErrZoneNotFound = errors.New("zone not found")
+	ErrInvalidZone  = errors.New("invalid zone")
+)

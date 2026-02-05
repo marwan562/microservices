@@ -10,7 +10,8 @@ import (
 )
 
 type ZoneHandler struct {
-	service *zone.Service
+	service         *zone.Service
+	templateService *zone.TemplateService
 }
 
 type CreateZoneRequest struct {
@@ -106,4 +107,55 @@ func (h *ZoneHandler) BulkUpdateMetadata(w http.ResponseWriter, r *http.Request)
 	jsonutil.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"updated_count": count,
 	})
+}
+
+func (h *ZoneHandler) ListTemplates(w http.ResponseWriter, r *http.Request) {
+	templates := h.templateService.List()
+	jsonutil.WriteJSON(w, http.StatusOK, templates)
+}
+
+func (h *ZoneHandler) GetTemplate(w http.ResponseWriter, r *http.Request) {
+	templateType := r.URL.Query().Get("type")
+	if templateType == "" {
+		jsonutil.WriteErrorJSON(w, "type query parameter required")
+		return
+	}
+
+	template, err := h.templateService.Get(zone.TemplateType(templateType))
+	if err != nil {
+		jsonutil.WriteErrorJSON(w, err.Error())
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, template)
+}
+
+type ApplyTemplateRequest struct {
+	ZoneID       string `json:"zone_id"`
+	TemplateType string `json:"template_type"`
+}
+
+func (h *ZoneHandler) ApplyTemplate(w http.ResponseWriter, r *http.Request) {
+	var req ApplyTemplateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.ZoneID == "" {
+		jsonutil.WriteErrorJSON(w, "zone_id is required")
+		return
+	}
+	if req.TemplateType == "" {
+		jsonutil.WriteErrorJSON(w, "template_type is required")
+		return
+	}
+
+	result, err := h.templateService.Apply(r.Context(), req.ZoneID, zone.TemplateType(req.TemplateType))
+	if err != nil {
+		jsonutil.WriteErrorJSON(w, err.Error())
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, result)
 }

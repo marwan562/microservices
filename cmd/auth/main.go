@@ -104,9 +104,10 @@ func main() {
 		},
 	}
 	zoneService := zone.NewService(zoneRepo, providers)
+	templateService := zone.NewTemplateService(zoneService)
 
 	handler := &AuthHandler{service: authService, hmacSecret: hmacSecret}
-	zoneHandler := &ZoneHandler{service: zoneService}
+	zoneHandler := &ZoneHandler{service: zoneService, templateService: templateService}
 
 	// Initialize Tracer
 	shutdown, err := observability.InitTracer(context.Background(), observability.Config{
@@ -196,6 +197,27 @@ func main() {
 	mux.HandleFunc("/flows/resume", flowHandler.ResumeExecution)
 	mux.HandleFunc("/flows/bulk-update", flowHandler.BulkUpdateFlows)
 	mux.HandleFunc("/zones/bulk-metadata", zoneHandler.BulkUpdateMetadata)
+
+	// Template Management
+	mux.HandleFunc("/templates", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			if r.URL.Query().Get("type") != "" {
+				zoneHandler.GetTemplate(w, r)
+			} else {
+				zoneHandler.ListTemplates(w, r)
+			}
+		default:
+			jsonutil.WriteErrorJSON(w, "Method not allowed")
+		}
+	})
+	mux.HandleFunc("/templates/apply", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			zoneHandler.ApplyTemplate(w, r)
+		} else {
+			jsonutil.WriteErrorJSON(w, "Method not allowed")
+		}
+	})
 
 	log.Println("Auth service HTTP starting on :8081")
 

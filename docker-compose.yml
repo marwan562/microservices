@@ -76,19 +76,7 @@ services:
     networks:
       - microservices-net
 
-  ledger_db:
-    image: postgres:15-alpine
-    container_name: microservices_ledger_db
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: ledger
-    ports:
-      - "5435:5432"
-    volumes:
-      - ledger_data:/var/lib/postgresql/data
-    networks:
-      - microservices-net
+
 
   # Microservices
   auth:
@@ -213,12 +201,12 @@ services:
         SERVICE_NAME: fraud
     container_name: microservices_fraud
     environment:
-      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_BROKERS=redpanda:29092
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
     ports:
       - "8089:8081" # Map internal 8081 to 8089 to avoid clash if on host
     depends_on:
-      - kafka
+      - redpanda
       - rabbitmq
     networks:
       - microservices-net

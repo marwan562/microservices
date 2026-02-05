@@ -161,6 +161,61 @@ var TemplateRegistry = map[TemplateType]Template{
 			"usage.recorded", "usage.threshold",
 		},
 	},
+	TemplateMarketplace: {
+		Type:        TemplateMarketplace,
+		Name:        "Marketplace",
+		Description: "Multi-vendor marketplace with escrow and fee management",
+		Flows: []FlowTemplate{
+			{
+				Name:    "Order Payment to Escrow",
+				Trigger: TriggerConfig{Type: "event", EventType: "payment.succeeded"},
+				Actions: []ActionConfig{
+					{Type: "ledger", Template: "escrow-credit"},
+					{Type: "notification", Channel: "email", Template: "order-confirmation"},
+				},
+			},
+			{
+				Name:    "Release Payment to Seller",
+				Trigger: TriggerConfig{Type: "event", EventType: "order.delivered"},
+				Actions: []ActionConfig{
+					{Type: "ledger", Template: "release-from-escrow"},
+					{Type: "notification", Channel: "email", Template: "payment-released"},
+				},
+			},
+			{
+				Name:    "Process Platform Fees",
+				Trigger: TriggerConfig{Type: "event", EventType: "payment.succeeded"},
+				Logic: []LogicConfig{
+					{Type: "condition", Expression: "event.data.amount > 0"},
+				},
+				Actions: []ActionConfig{
+					{Type: "ledger", Template: "platform-fee"},
+				},
+			},
+			{
+				Name:    "Handle Refunds",
+				Trigger: TriggerConfig{Type: "event", EventType: "refund.requested"},
+				Logic: []LogicConfig{
+					{Type: "approval", Expression: "support@company.com"},
+				},
+				Actions: []ActionConfig{
+					{Type: "ledger", Template: "refund-from-escrow"},
+					{Type: "notification", Channel: "email", Template: "refund-processed"},
+				},
+			},
+		},
+		Webhooks: []WebhookConfig{
+			{Name: "Payment Gateway", Path: "/webhooks/payments", Events: []string{"payment.*"}},
+			{Name: "Shipping", Path: "/webhooks/shipping", Events: []string{"order.*", "shipping.*"}},
+			{Name: "Vendor API", Path: "/webhooks/vendors", Events: []string{"vendor.*"}},
+		},
+		EventTypes: []string{
+			"order.created", "order.paid", "order.shipped", "order.delivered",
+			"payment.succeeded", "payment.failed", "refund.requested", "refund.completed",
+			"vendor.registered", "vendor.approved", "vendor.payout",
+			"dispute.opened", "dispute.resolved",
+		},
+	},
 	TemplateFintechBasic: {
 		Type:        TemplateFintechBasic,
 		Name:        "Fintech Basic",
