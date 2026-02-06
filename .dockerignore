@@ -24,7 +24,6 @@ ROADMAP.md
 README.md
 docs/
 examples/
-third_party/
 package.json
 package-lock.json
 prometheus.yml
