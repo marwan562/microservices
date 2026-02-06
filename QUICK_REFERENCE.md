@@ -6,7 +6,24 @@
 
 ## Development Quick Start
 
-### 1. Local Setup
+### 1. Local Setup (Using sapliy-cli)
+
+```bash
+# Install CLI
+npm install -g @sapliyio/sapliy-cli
+
+# Start everything with one command
+sapliy dev
+
+# OR start separately
+sapliy run       # Backend + services in one terminal
+sapliy frontend  # Frontend in another terminal
+
+# Verify everything is running
+sapliy health
+```
+
+### 1b. Manual Setup (Without CLI)
 
 ```bash
 # Clone and setup
@@ -106,20 +123,55 @@ if (!isValid) {
 
 ## Testing Flows
 
-### Using CLI
+### Using sapliy-cli
+
+#### Quick Commands
 
 ```bash
-# Listen for webhooks
-sapliy listen --zone=test --event="checkout.completed"
+# Emit a test event
+sapliy events emit "checkout.completed" '{"orderId":"12345","amount":99.99}'
 
-# Trigger a flow
-sapliy flows trigger \
-  --zone=test \
-  --flow=send-confirmation-email \
-  --data='{"orderId": "12345"}'
+# Listen for events in real-time
+sapliy events listen "checkout.*"
 
 # View flow executions
-sapliy flows executions --zone=test --flow=send-confirmation-email
+sapliy flows list
+sapliy flows logs --flow=send-confirmation-email --follow
+
+# Test a specific flow
+sapliy test --flow=send-confirmation-email
+
+# Replay an event
+sapliy events replay --after="2024-01-15T10:00:00Z"
+```
+
+#### Webhook Testing
+
+```bash
+# Start webhook inspector (see incoming webhooks)
+sapliy webhooks listen
+
+# Test webhook delivery to URL
+sapliy webhooks test --url="https://example.com/webhook"
+
+# Replay failed webhook
+sapliy webhooks replay --id="evt_abc123"
+```
+
+#### Complete Dev Workflow
+
+```bash
+# Terminal 1: Start backend + frontend
+sapliy dev
+
+# Terminal 2: Watch logs
+sapliy logs --follow
+
+# Terminal 3: Listen to events
+sapliy events listen "*"
+
+# Terminal 4: Emit test events
+sapliy events emit "checkout.completed" '{"orderId":"test"}'
 ```
 
 ### Using Testing Toolkit

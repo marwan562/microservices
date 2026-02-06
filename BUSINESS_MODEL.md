@@ -634,6 +634,562 @@ Advantage n8n:
 
 ---
 
+---
+
+## CLI-First Developer Experience
+
+### The sapliy-cli Vision
+
+The **sapliy-cli** is the unified entry point for all developer interactions with Sapliy. It provides:
+
+- 🔐 Authentication & key management
+- 🏃 Local automation server (self-hosted)
+- 🎨 Frontend UI launcher (flow builder)
+- 🧪 Testing & debugging tools
+- 🔌 Webhook inspection & replay
+- 📊 Log streaming & monitoring
+
+**Goal**: Developers can build, test, and deploy flows without switching between 5+ different tools.
+
+### Command Structure
+
+#### Core Commands
+
+```bash
+# Authentication
+sapliy login                          # Authenticate with Sapliy (SaaS or self-hosted)
+sapliy logout                         # Remove stored credentials
+sapliy whoami                         # Show current user & zone
+
+# Development Server
+sapliy run                            # Start local backend + event processor
+sapliy frontend                       # Launch flow builder UI (http://localhost:3000)
+sapliy dev                            # Start backend + frontend + watch mode (all-in-one)
+
+# Zone Management
+sapliy zones list                     # List all zones
+sapliy zones create --name="my-app"   # Create new zone
+sapliy zones switch --zone="prod"     # Switch active zone
+sapliy zones export                   # Export zone configuration
+
+# Flow Management
+sapliy flows list                     # List flows in current zone
+sapliy flows create --name="checkout" # Create flow interactively
+sapliy flows deploy --flow="checkout" # Deploy flow to live mode
+sapliy flows test --flow="checkout"   # Test flow locally
+sapliy flows logs --flow="checkout"   # Stream flow execution logs
+
+# Event Management
+sapliy events emit "payment.completed" '{"amount":100}' # Emit test event
+sapliy events listen "payment.*"      # Listen to events in real-time
+sapliy events replay --after="2024-01-15" # Replay historical events
+
+# Webhook Management
+sapliy webhooks listen                # Start webhook inspector (http://localhost:9000)
+sapliy webhooks test --url="http://..." # Test webhook delivery
+sapliy webhooks replay --id="evt_xxx" # Replay webhook delivery
+
+# Testing
+sapliy test --flow="checkout"         # Run flow tests
+sapliy test --all                     # Run all flow tests
+sapliy test --coverage                # Show code coverage
+
+# Monitoring
+sapliy logs --follow                  # Stream all service logs
+sapliy metrics                        # Show performance metrics
+sapliy health                         # Check service health
+
+# Configuration
+sapliy config get <key>               # Get config value
+sapliy config set <key> <value>       # Set config value
+sapliy env --export                   # Export environment variables
+```
+
+#### Advanced Options
+
+```bash
+# Port/Host configuration
+sapliy run --port 8080 --host 0.0.0.0
+
+# Multi-service control
+sapliy run --services postgres,redis,kafka # Start specific services only
+sapliy run --skip-postgres                 # Skip specific services
+
+# Frontend options
+sapliy frontend --port 3000 --auto-open    # Auto-open browser
+sapliy frontend --prod-endpoint "https://api.sapliy.io" # Use SaaS backend
+
+# Development mode
+sapliy dev --watch                    # Watch for file changes, auto-reload
+sapliy dev --debug                    # Enable debug logging
+sapliy dev --seed                     # Load sample data on startup
+```
+
+### Architecture: CLI Entry Point Design
+
+```
+sapliy-cli/
+│
+├─ bin/
+│   └─ sapliy                   # Main CLI executable
+│
+├─ commands/
+│   ├─ auth/
+│   │   ├─ login.js
+│   │   ├─ logout.js
+│   │   └─ whoami.js
+│   │
+│   ├─ dev/
+│   │   ├─ run.js               # Start backend services
+│   │   ├─ frontend.js          # Launch flow builder UI
+│   │   ├─ dev.js               # Combined backend + frontend
+│   │   ├─ test.js              # Run flow tests
+│   │   └─ logs.js              # Stream logs
+│   │
+│   ├─ zones/
+│   │   ├─ list.js
+│   │   ├─ create.js
+│   │   ├─ switch.js
+│   │   └─ export.js
+│   │
+│   ├─ flows/
+│   │   ├─ list.js
+│   │   ├─ create.js
+│   │   ├─ deploy.js
+│   │   └─ test.js
+│   │
+│   ├─ events/
+│   │   ├─ emit.js
+│   │   ├─ listen.js
+│   │   └─ replay.js
+│   │
+│   ├─ webhooks/
+│   │   ├─ listen.js
+│   │   ├─ test.js
+│   │   └─ replay.js
+│   │
+│   └─ config/
+│       ├─ get.js
+│       └─ set.js
+│
+├─ services/
+│   ├─ docker.js                # Docker/container management
+│   ├─ ports.js                 # Port detection & management
+│   ├─ logger.js                # Unified logging
+│   ├─ config-loader.js         # Load sapliy.json config
+│   └─ subprocess-manager.js    # Manage child processes
+│
+├─ utils/
+│   ├─ auth.js                  # JWT/key management
+│   ├─ http-client.js           # API calls to backend
+│   ├─ ws-client.js             # WebSocket for event streaming
+│   ├─ docker-compose.js        # Docker Compose helper
+│   ├─ spinner.js               # CLI animations
+│   └─ table.js                 # Formatted table output
+│
+├─ config/
+│   └─ defaults.json            # Default ports, endpoints
+│
+├─ templates/
+│   ├─ sapliy.json              # Config template
+│   ├─ Dockerfile.dev           # Development Docker setup
+│   └─ docker-compose.dev.yml   # Multi-service compose
+│
+└─ package.json
+```
+
+### Key Implementation Details
+
+#### 1. Backend Launcher (run.js)
+
+```javascript
+// commands/dev/run.js
+const { spawn } = require("child_process");
+const path = require("path");
+const fs = require("fs");
+const { findFreePort } = require("../../utils/ports");
+const { Logger } = require("../../services/logger");
+
+const logger = new Logger("sapliy:run");
+
+async function runBackend(options = {}) {
+  const {
+    port = 8080,
+    host = "localhost",
+    services = ["postgres", "redis", "kafka"],
+    skipDocker = false,
+    watch = false,
+  } = options;
+
+  logger.info("🚀 Starting Sapliy backend services...");
+
+  // 1. Check if docker-compose is available
+  if (!skipDocker && !hasDockerCompose()) {
+    logger.error("Docker Compose not found. Install it or use --skip-docker");
+    return;
+  }
+
+  // 2. Find available ports
+  const ports = {
+    api: await findFreePort(port),
+    postgres: await findFreePort(5432),
+    redis: await findFreePort(6379),
+    kafka: await findFreePort(9092),
+  };
+
+  // 3. Load or create .env.local
+  const envPath = path.resolve(process.cwd(), ".env.local");
+  const env = loadEnv(envPath);
+  env.API_PORT = ports.api;
+  env.DATABASE_URL = `postgresql://postgres:password@localhost:${ports.postgres}/sapliy`;
+  env.REDIS_URL = `redis://localhost:${ports.redis}`;
+  env.KAFKA_BROKERS = `localhost:${ports.kafka}`;
+  saveEnv(envPath, env);
+
+  // 4. Start docker-compose
+  if (!skipDocker) {
+    const dockerProcess = spawn(
+      "docker-compose",
+      ["-f", "docker-compose.dev.yml", "up", "--remove-orphans"],
+      {
+        stdio: "inherit",
+        env: { ...process.env, ...env },
+      },
+    );
+
+    dockerProcess.on("error", (err) => {
+      logger.error(`Docker Compose failed: ${err.message}`);
+    });
+  }
+
+  // 5. Start API server
+  logger.info(`✅ Starting API server on http://${host}:${ports.api}`);
+
+  const apiProcess = spawn("npm", ["run", "start:api"], {
+    cwd: path.resolve(__dirname, "../../..", "fintech-ecosystem"),
+    stdio: "inherit",
+    env: { ...process.env, ...env },
+  });
+
+  // 6. Handle graceful shutdown
+  process.on("SIGINT", () => {
+    logger.info("Shutting down services...");
+    apiProcess.kill();
+    if (!skipDocker) {
+      spawn("docker-compose", ["down"], { stdio: "inherit" });
+    }
+    process.exit(0);
+  });
+
+  logger.info("✨ All services running!");
+  logger.info("");
+  logger.info("  API:      http://${host}:${ports.api}");
+  logger.info("  Postgres: localhost:${ports.postgres}");
+  logger.info("  Redis:    localhost:${ports.redis}");
+  logger.info("  Kafka:    localhost:${ports.kafka}");
+  logger.info("");
+  logger.info("Run `sapliy frontend` in another terminal to launch the UI");
+}
+
+module.exports = { runBackend };
+```
+
+#### 2. Frontend Launcher (frontend.js)
+
+```javascript
+// commands/dev/frontend.js
+const { spawn } = require("child_process");
+const path = require("path");
+const open = require("open");
+const { Logger } = require("../../services/logger");
+const { findFreePort } = require("../../utils/ports");
+
+const logger = new Logger("sapliy:frontend");
+
+async function launchFrontend(options = {}) {
+  const {
+    port = 3000,
+    host = "localhost",
+    autoOpen = true,
+    prodEndpoint = null,
+  } = options;
+
+  logger.info("🎨 Launching Sapliy Flow Builder...");
+
+  // 1. Find available port
+  const availablePort = await findFreePort(port);
+
+  // 2. Set environment variables
+  const env = {
+    ...process.env,
+    PORT: availablePort,
+    VITE_API_ENDPOINT: prodEndpoint || `http://localhost:8080`,
+    VITE_MODE: "development",
+  };
+
+  // 3. Launch frontend dev server
+  const frontendPath = path.resolve(
+    __dirname,
+    "../../..",
+    "fintech-automation",
+  );
+
+  logger.info(`Starting dev server on http://${host}:${availablePort}`);
+
+  const frontendProcess = spawn("npm", ["run", "dev"], {
+    cwd: frontendPath,
+    stdio: "inherit",
+    env,
+  });
+
+  // 4. Auto-open browser
+  if (autoOpen) {
+    setTimeout(() => {
+      logger.info(`🌐 Opening browser...`);
+      open(`http://${host}:${availablePort}`);
+    }, 2000);
+  }
+
+  // 5. Handle shutdown
+  frontendProcess.on("error", (err) => {
+    logger.error(`Frontend process failed: ${err.message}`);
+  });
+
+  frontendProcess.on("close", (code) => {
+    if (code !== 0) {
+      logger.error(`Frontend exited with code ${code}`);
+    }
+  });
+
+  logger.info("✨ Frontend running!");
+  logger.info(`   → http://${host}:${availablePort}`);
+}
+
+module.exports = { launchFrontend };
+```
+
+#### 3. Combined Dev Command (dev.js)
+
+```javascript
+// commands/dev/dev.js
+const { runBackend } = require("./run");
+const { launchFrontend } = require("./frontend");
+const { Logger } = require("../../services/logger");
+
+const logger = new Logger("sapliy:dev");
+
+async function devMode(options = {}) {
+  logger.info("🚀 Starting Sapliy in development mode...");
+  logger.info("");
+
+  const backendOptions = {
+    port: options.apiPort || 8080,
+    watch: options.watch !== false,
+    ...options,
+  };
+
+  const frontendOptions = {
+    port: options.uiPort || 3000,
+    autoOpen: options.autoOpen !== false,
+    prodEndpoint: options.prodEndpoint,
+  };
+
+  try {
+    // Start both in parallel
+    await Promise.all([
+      runBackend(backendOptions),
+      new Promise((resolve) => setTimeout(resolve, 3000)) // Wait for backend to start
+        .then(() => launchFrontend(frontendOptions)),
+    ]);
+  } catch (error) {
+    logger.error(`Development mode failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+module.exports = { devMode };
+```
+
+### Professional Enhancements
+
+#### 1. Automatic Port Detection
+
+```javascript
+// utils/ports.js
+const net = require("net");
+
+async function findFreePort(preferredPort = 3000) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.listen(preferredPort, () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+    server.on("error", () => {
+      // Port in use, try next one
+      resolve(findFreePort(preferredPort + 1));
+    });
+  });
+}
+```
+
+#### 2. Unified Logging System
+
+```javascript
+// services/logger.js
+class Logger {
+  constructor(namespace) {
+    this.namespace = namespace;
+  }
+
+  info(message) {
+    console.log(`  ${this.namespace} ℹ️  ${message}`);
+  }
+
+  success(message) {
+    console.log(`  ${this.namespace} ✅ ${message}`);
+  }
+
+  warn(message) {
+    console.warn(`  ${this.namespace} ⚠️  ${message}`);
+  }
+
+  error(message) {
+    console.error(`  ${this.namespace} ❌ ${message}`);
+  }
+
+  debug(message) {
+    if (process.env.DEBUG) {
+      console.log(`  ${this.namespace} 🐛 ${message}`);
+    }
+  }
+
+  // Pretty print tables
+  table(data) {
+    console.table(data);
+  }
+}
+```
+
+#### 3. Configuration Management
+
+```javascript
+// sapliy.json (in project root)
+{
+  "name": "my-sapliy-app",
+  "version": "1.0.0",
+  "sapliy": {
+    "apiPort": 8080,
+    "uiPort": 3000,
+    "services": ["postgres", "redis", "kafka"],
+    "environment": {
+      "LOG_LEVEL": "info",
+      "TEST_MODE": true
+    },
+    "integrations": [
+      {
+        "type": "stripe",
+        "testKey": "sk_test_..."
+      }
+    ],
+    "flows": [
+      "./flows/payment.json",
+      "./flows/notifications.json"
+    ]
+  }
+}
+```
+
+### Developer Experience: Real-World Workflow
+
+#### Scenario 1: Fresh Start (No Backend Running)
+
+```bash
+$ cd my-sapliy-app
+$ sapliy dev
+
+✨ Starting Sapliy in development mode...
+
+  sapliy:run ✅ Checking Docker...
+  sapliy:run ✅ Creating .env.local
+  sapliy:run 🐳 Starting containers...
+  sapliy:run ✅ PostgreSQL running on localhost:5432
+  sapliy:run ✅ Redis running on localhost:6379
+  sapliy:run ✅ Kafka running on localhost:9092
+  sapliy:run ✅ API server running on http://localhost:8080
+
+  sapliy:frontend ✅ Starting dev server...
+  sapliy:frontend 🌐 Opening browser to http://localhost:3000
+
+✨ All systems running!
+   API:      http://localhost:8080
+   Frontend: http://localhost:3000
+
+Press Ctrl+C to stop
+```
+
+#### Scenario 2: Test an Event
+
+```bash
+$ sapliy events emit "payment.completed" '{
+  "orderId": "12345",
+  "amount": 99.99,
+  "currency": "USD"
+}'
+
+✅ Event emitted: evt_abc123
+   Event ID: evt_abc123
+   Zone: zone_test_xxx
+   Type: payment.completed
+
+🔄 Executing flows...
+   Flow: send_confirmation_email (success)
+   Flow: update_accounting (success)
+
+📊 Results:
+   ✅ 2/2 flows executed successfully
+```
+
+#### Scenario 3: Stream Logs
+
+```bash
+$ sapliy logs --follow
+
+sapliy:api [10:23:45] GET /health 200
+sapliy:api [10:23:46] POST /events 201
+sapliy:flow-engine [10:23:46] Executing flow: send_confirmation_email
+sapliy:flow-engine [10:23:47] Webhook sent to https://example.com/webhook (200 OK)
+sapliy:api [10:23:47] POST /webhooks/callback 200
+```
+
+### Revenue Implications
+
+#### For SaaS
+
+- ✅ Lower onboarding friction (5 min to first event vs. 15 min without CLI)
+- ✅ Improved developer experience → higher conversion (free → paid)
+- ✅ Faster feedback loop → product-market fit
+- ✅ Community contributions to CLI
+
+#### For Self-Hosted
+
+- ✅ Professional developer experience (comparable to Node-RED)
+- ✅ Easier evaluation for enterprises
+- ✅ Faster time-to-value
+- ✅ CLI-first enables infrastructure automation
+
+#### For Monetization
+
+- ✅ **Advanced CLI features** (enterprise flag):
+  - `sapliy audit-export` (compliance)
+  - `sapliy performance-profile` (analytics)
+  - `sapliy multi-region-sync` (HA)
+  - Pricing: $49-$299/month add-on
+- ✅ **Professional Services**: Setup & configuration via CLI
+  - Pricing: $200-$350/hour
+
+---
+
 ## Conclusion
 
 Sapliy's hybrid SaaS + self-hosted model creates multiple revenue streams while serving the complete market:
@@ -643,6 +1199,7 @@ Sapliy's hybrid SaaS + self-hosted model creates multiple revenue streams while 
 - **One codebase** reduces engineering burden & increases agility
 - **Open-source** builds community trust & accelerates adoption
 - **Fintech focus** carves out a differentiated niche
+- **CLI-first** approach drives adoption & professional positioning
 
 **Target metrics for success:**
 
@@ -650,3 +1207,4 @@ Sapliy's hybrid SaaS + self-hosted model creates multiple revenue streams while 
 - Year 3: $5.5M revenue, 5K+ SaaS customers, 20+ Enterprise customers
 - CAC Payback: 3-4 months (SaaS), 12-18 months (Enterprise)
 - Gross Margin: 78% blended
+- CLI adoption: 80% of developers use sapliy-cli for development
