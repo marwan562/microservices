@@ -43,7 +43,11 @@ func main() {
 		log.Println("Database connection established")
 
 		// Run automated migrations
-		if err := database.Migrate(db, "microservices", "migrations/auth"); err != nil {
+		migrationPath := os.Getenv("MIGRATIONS_PATH")
+		if migrationPath == "" {
+			migrationPath = "migrations/auth"
+		}
+		if err := database.Migrate(db, "microservices", migrationPath); err != nil {
 			log.Fatalf("Failed to run migrations: %v", err)
 		}
 	}
@@ -83,7 +87,11 @@ func main() {
 
 	providers := zoneDomain.TemplateProviders{
 		CreateLedgerAccount: func(ctx context.Context, name, accType, currency string, zoneID, mode string) error {
-			conn, err := grpc.NewClient("localhost:50052", grpc.WithInsecure())
+			ledgerAddr := os.Getenv("LEDGER_GRPC_ADDR")
+			if ledgerAddr == "" {
+				ledgerAddr = "localhost:50052"
+			}
+			conn, err := grpc.NewClient(ledgerAddr, grpc.WithInsecure())
 			if err != nil {
 				return err
 			}
@@ -285,9 +293,6 @@ func main() {
 		}
 	}()
 
-	<-ctx.Done()
-	logger.Info("Shutting down Auth Service...")
-
 	// Start gRPC Server
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
@@ -299,7 +304,16 @@ func main() {
 	)
 	pb.RegisterAuthServiceServer(s, NewAuthGRPCServer(authService))
 
-	log.Println("Auth service gRPC starting on :50051")
+	logger.Info("Auth service gRPC starting", "port", ":50051")
+
+	// Graceful shutdown
+	go func() {
+		<-ctx.Done()
+		logger.Info("Shutting down Auth Service...")
+		s.GracefulStop()
+		srv.Shutdown(context.Background())
+	}()
+
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("gRPC server failed: %v", err)
 	}

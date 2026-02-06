@@ -101,6 +101,9 @@ services:
     environment:
       - DB_DSN=postgres://user:password@postgres:5432/microservices?sslmode=disable
       - API_KEY_HMAC_SECRET=super-secret-pepper-change-me-in-prod
+      - LEDGER_GRPC_ADDR=ledger:50052
+      - MIGRATIONS_PATH=/app/migrations/auth
+      - REDIS_ADDR=redis:6379
     ports:
       - "8081:8081"
     depends_on:
@@ -118,6 +121,7 @@ services:
     environment:
       - DB_DSN=postgres://user:password@payments_db:5432/payments?sslmode=disable
       - REDIS_ADDR=redis:6379
+      - MIGRATIONS_PATH=/app/migrations/payments
     ports:
       - "8082:8082"
     depends_on:
@@ -135,10 +139,28 @@ services:
     container_name: microservices_ledger
     environment:
       - DB_DSN=postgres://user:password@ledger_db:5432/ledger?sslmode=disable
+      - MIGRATIONS_PATH=/app/migrations/ledger
+      - REDIS_ADDR=redis:6379
     ports:
       - "8083:8083"
     depends_on:
       - ledger_db
+    networks:
+      - microservices-net
+
+  wallet:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: wallet
+    container_name: microservices_wallet
+    environment:
+      - LEDGER_GRPC_ADDR=ledger:50052
+    ports:
+      - "8085:8085"
+    depends_on:
+      - ledger
     networks:
       - microservices-net
 
@@ -152,8 +174,10 @@ services:
     environment:
       - REDIS_ADDR=redis:6379
       - AUTH_SERVICE_URL=http://auth:8081
+      - AUTH_GRPC_ADDR=auth:50051
       - PAYMENT_SERVICE_URL=http://payments:8082
       - LEDGER_SERVICE_URL=http://ledger:8083
+      - WALLET_GRPC_ADDR=wallet:50053
       - EVENTS_SERVICE_URL=http://events:8089
       - API_KEY_HMAC_SECRET=super-secret-pepper-change-me-in-prod
     ports:
@@ -232,6 +256,7 @@ services:
     environment:
       - KAFKA_BROKERS=redpanda:29092
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
+      - LEDGER_GRPC_ADDR=ledger:50052
     ports:
       - "8091:8081" # Map internal 8081 to 8091 to avoid clash
     depends_on:

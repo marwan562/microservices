@@ -144,11 +144,6 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	h.logger.Info("Incoming request", "method", r.Method, "path", path)
 
-	// Public Endpoints / Auth Management (JWT based or public)
-	if path == "/ws" {
-		h.handleWebSocket(w, r)
-		return
-	}
 
 	if strings.HasPrefix(path, "/auth") || path == "/health" {
 		h.logger.Debug("Routing public path", "path", path)
@@ -244,10 +239,26 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.proxyRequest(h.notificationServiceURL, w, r)
 
 	case strings.HasPrefix(p, "/events"):
-		// For events, we don't strip prefix if the target expects /v1
+		// Use internal WS handler for events stream, or proxy for others
+		if p == "/events/stream" && websocket.IsWebSocketUpgrade(r) {
+			h.handleWebSocket(w, r)
+			return
+		}
 		h.proxyRequest(h.eventsServiceURL, w, r)
 
+	case p == "/ws": // Legacy or alternative WS path
+		if websocket.IsWebSocketUpgrade(r) {
+			h.handleWebSocket(w, r)
+			return
+		}
+		jsonutil.WriteErrorJSON(w, "WebSocket upgrade required")
+
 	default:
+		// Fallback for root path if it's a WebSocket upgrade
+		if (p == "/" || p == "") && websocket.IsWebSocketUpgrade(r) {
+			h.handleWebSocket(w, r)
+			return
+		}
 		h.logger.Warn("Route not found", "path", path)
 		jsonutil.WriteErrorJSON(w, "Not Found")
 	}

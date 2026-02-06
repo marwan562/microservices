@@ -38,7 +38,11 @@ func main() {
 		logger.Info("Database connection established")
 
 		// Run automated migrations
-		if err := database.Migrate(db, "ledger", "migrations/ledger"); err != nil {
+		migrationPath := os.Getenv("MIGRATIONS_PATH")
+		if migrationPath == "" {
+			migrationPath = "migrations/ledger"
+		}
+		if err := database.Migrate(db, "ledger", migrationPath); err != nil {
 			logger.Error("Failed to run migrations", "error", err)
 			os.Exit(1)
 		}

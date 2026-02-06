@@ -40,7 +40,11 @@ func main() {
 		logger.Info("Database connection established")
 
 		// Run automated migrations
-		if err := database.Migrate(db, "payments", "migrations/payments"); err != nil {
+		migrationPath := os.Getenv("MIGRATIONS_PATH")
+		if migrationPath == "" {
+			migrationPath = "migrations/payments"
+		}
+		if err := database.Migrate(db, "payments", migrationPath); err != nil {
 			logger.Error("Failed to run migrations", "error", err)
 			os.Exit(1)
 		}
