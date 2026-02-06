@@ -31,6 +31,25 @@ infrastructure:
     image: "docker.redpanda.com/redpandadata/redpanda:v23.2.1"
     port: 9092
 
+# Default Service Config
+defaults:
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  pdb:
+    enabled: true
+    minAvailable: 1
+
 # Microservices
 services:
   auth:
@@ -39,6 +58,21 @@ services:
     port: 8081
     env:
       DB_DSN: "postgres://{{ .Values.secrets.postgresUser }}:{{ .Values.secrets.postgresPassword }}@postgres:5432/microservices?sslmode=disable"
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+    pdb:
+      enabled: true
+      minAvailable: 1
 
   payments:
     image: "microservice:latest"
@@ -47,6 +81,21 @@ services:
     env:
       DB_DSN: "postgres://{{ .Values.secrets.postgresUser }}:{{ .Values.secrets.postgresPassword }}@postgres:5432/payments?sslmode=disable"
       REDIS_ADDR: "redis:6379"
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 30
+      targetCPUUtilizationPercentage: 60
+    pdb:
+      enabled: true
+      minAvailable: 1
 
   ledger:
     image: "microservice:latest"
@@ -54,6 +103,21 @@ services:
     port: 8083
     env:
       DB_DSN: "postgres://{{ .Values.secrets.postgresUser }}:{{ .Values.secrets.postgresPassword }}@postgres:5432/ledger?sslmode=disable"
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 80
+    pdb:
+      enabled: true
+      minAvailable: 1
 
   gateway:
     image: "microservice:latest"
@@ -64,6 +128,21 @@ services:
       AUTH_SERVICE_URL: "http://auth:8081"
       PAYMENT_SERVICE_URL: "http://payments:8082"
       LEDGER_SERVICE_URL: "http://ledger:8083"
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 50
+      targetCPUUtilizationPercentage: 60
+    pdb:
+      enabled: true
+      minAvailable: 2
 
   notifications:
     image: "microservice:latest"
@@ -76,6 +155,20 @@ services:
       RABBITMQ_URL: "amqp://{{ .Values.secrets.rabbitmqUser }}:{{ .Values.secrets.rabbitmqPassword }}@rabbitmq:5672/"
       REDIS_ADDR: "redis:6379"
       DATABASE_URL: "postgres://{{ .Values.secrets.postgresUser }}:{{ .Values.secrets.postgresPassword }}@postgres:5432/microservices?sslmode=disable"
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+    pdb:
+      enabled: false
 
   fraud:
     image: "microservice:latest"
@@ -84,6 +177,20 @@ services:
     env:
       KAFKA_BROKERS: "redpanda:9092"
       RABBITMQ_URL: "amqp://{{ .Values.secrets.rabbitmqUser }}:{{ .Values.secrets.rabbitmqPassword }}@rabbitmq:5672/"
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 80
+    pdb:
+      enabled: false
 
   reconciler:
     image: "microservice:latest"
@@ -92,3 +199,16 @@ services:
     env:
       PAYMENTS_DB_DSN: "postgres://{{ .Values.secrets.postgresUser }}:{{ .Values.secrets.postgresPassword }}@postgres:5432/payments?sslmode=disable"
       LEDGER_DB_DSN: "postgres://{{ .Values.secrets.postgresUser }}:{{ .Values.secrets.postgresPassword }}@postgres:5432/ledger?sslmode=disable"
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 1
+    pdb:
+      enabled: false

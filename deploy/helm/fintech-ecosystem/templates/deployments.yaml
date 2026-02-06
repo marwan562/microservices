@@ -8,15 +8,24 @@ metadata:
   labels:
     {{- include "fintech-ecosystem.labels" $ | nindent 4 }}
     app: {{ $name }}
+    version: {{ $.Chart.AppVersion }}
 spec:
+{{- if not $config.autoscaling.enabled }}
   replicas: {{ $config.replicas }}
+{{- end }}
   selector:
     matchLabels:
       app: {{ $name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
   template:
     metadata:
       labels:
         app: {{ $name }}
+        version: {{ $.Chart.AppVersion }}
     spec:
       containers:
       - name: {{ $name }}
@@ -40,13 +49,20 @@ spec:
 {{- end }}
         ports:
         - containerPort: {{ $config.port }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ $config.port }}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ $config.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
+          {{- toYaml $config.resources | nindent 10 }}
 ---
 apiVersion: v1
 kind: Service

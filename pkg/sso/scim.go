@@ -107,11 +107,12 @@ func (h *SCIMHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *SCIMHandler) handleUsers(w http.ResponseWriter, r *http.Request, id string) {
 	if id == "" {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			h.listUsers(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			h.createUser(w, r)
-		} else {
+		default:
 			h.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
 		return
