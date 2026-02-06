@@ -35,23 +35,26 @@
 // .eslintrc.js
 module.exports = {
   root: true,
-  parser: '@typescript-eslint/parser',
+  parser: "@typescript-eslint/parser",
   extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended",
   ],
   rules: {
-    'no-console': ['warn', { allow: ['warn', 'error'] }],
-    'no-var': 'error',
-    'prefer-const': 'error',
-    'eqeqeq': ['error', 'always'],
-    '@typescript-eslint/explicit-function-return-types': 'error',
-    '@typescript-eslint/no-explicit-any': 'error',
-    'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': ['error', {
-      argsIgnorePattern: '^_',
-    }],
+    "no-console": ["warn", { allow: ["warn", "error"] }],
+    "no-var": "error",
+    "prefer-const": "error",
+    eqeqeq: ["error", "always"],
+    "@typescript-eslint/explicit-function-return-types": "error",
+    "@typescript-eslint/no-explicit-any": "error",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        argsIgnorePattern: "^_",
+      },
+    ],
   },
 };
 ```
@@ -139,16 +142,16 @@ src/
 ### 3. Test Naming Convention
 
 ```typescript
-describe('AuthService', () => {
-  describe('login', () => {
+describe("AuthService", () => {
+  describe("login", () => {
     // ✅ Good: Clear, follows Given-When-Then pattern
-    it('should return token when valid credentials provided', () => {});
-    it('should throw error when user not found', () => {});
-    it('should enforce password minimum length', () => {});
-    
+    it("should return token when valid credentials provided", () => {});
+    it("should throw error when user not found", () => {});
+    it("should enforce password minimum length", () => {});
+
     // ❌ Bad: Unclear, too generic
-    it('works', () => {});
-    it('handles login', () => {});
+    it("works", () => {});
+    it("handles login", () => {});
   });
 });
 ```
@@ -177,7 +180,7 @@ let globalMockUser;
 ```typescript
 // ✅ Good: Specific, descriptive assertions
 expect(response.status).toBe(200);
-expect(response.body).toHaveProperty('token');
+expect(response.body).toHaveProperty("token");
 expect(response.body.token).toMatch(/^tk_/);
 
 // ❌ Bad: Generic, hard to debug failures
@@ -195,18 +198,18 @@ expect(data).toEqual(expect.anything());
 // ✅ Good: Use environment variables
 const dbPassword = process.env.DB_PASSWORD;
 if (!dbPassword) {
-  throw new Error('DB_PASSWORD not set');
+  throw new Error("DB_PASSWORD not set");
 }
 
 // ❌ Bad: Hardcoded secrets
-const dbPassword = 'mySecurePassword123';
+const dbPassword = "mySecurePassword123";
 ```
 
 ### 2. Input Validation
 
 ```typescript
 // ✅ Good: Validate all inputs
-import { z } from 'zod';
+import { z } from "zod";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -235,7 +238,7 @@ catch (error) {
 
 // ❌ Bad: Leak sensitive information
 catch (error) {
-  res.status(500).json({ 
+  res.status(500).json({
     error: error.message, // Exposes database details
     stack: error.stack,    // Exposes source code paths
   });
@@ -270,11 +273,11 @@ class UserController {
     // Verify user owns the resource
     const user = await auth.getUser(req);
     const targetUser = await db.getUser(req.params.id);
-    
+
     if (user.id !== targetUser.id && !user.isAdmin) {
       throw new ForbiddenError('Unauthorized');
     }
-    
+
     // Update user
   }
 }
@@ -345,8 +348,8 @@ DELETE /api/v1/zones/:id          // 204 No Content - delete resource
 
 ```typescript
 // ✅ Good: Version in URL path
-GET /api/v1/zones
-GET /api/v2/zones  // Different implementation if needed
+GET / api / v1 / zones;
+GET / api / v2 / zones; // Different implementation if needed
 
 // Accept both with deprecation warning
 // But prefer URL versioning over Accept headers
@@ -357,7 +360,7 @@ GET /api/v2/zones  // Different implementation if needed
 ```typescript
 /**
  * Create a new zone
- * 
+ *
  * @openapi
  * /zones:
  *   post:
@@ -380,7 +383,7 @@ GET /api/v2/zones  // Different implementation if needed
  *       400:
  *         description: Invalid request
  */
-app.post('/zones', createZoneController);
+app.post("/zones", createZoneController);
 ```
 
 ---
@@ -410,12 +413,16 @@ users.forEach(async (user) => {
 // ✅ Good: ACID transactions
 async function transferMoney(fromId: string, toId: string, amount: number) {
   const tx = await db.transaction();
-  
+
   try {
-    await tx.query('UPDATE accounts SET balance = balance - $1 WHERE id = $2',
-      [amount, fromId]);
-    await tx.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2',
-      [amount, toId]);
+    await tx.query("UPDATE accounts SET balance = balance - $1 WHERE id = $2", [
+      amount,
+      fromId,
+    ]);
+    await tx.query("UPDATE accounts SET balance = balance + $1 WHERE id = $2", [
+      amount,
+      toId,
+    ]);
     await tx.commit();
   } catch (error) {
     await tx.rollback();
@@ -425,8 +432,8 @@ async function transferMoney(fromId: string, toId: string, amount: number) {
 
 // ✅ Good: Using ORM transaction helpers
 await db.transaction(async (trx) => {
-  await trx('accounts').where('id', fromId).decrement('balance', amount);
-  await trx('accounts').where('id', toId).increment('balance', amount);
+  await trx("accounts").where("id", fromId).decrement("balance", amount);
+  await trx("accounts").where("id", toId).increment("balance", amount);
 });
 ```
 
@@ -467,23 +474,23 @@ SELECT pgp_sym_encrypt('sensitive_data', 'encryption_key');
 
 ```typescript
 // ✅ Good: Appropriate log levels
-logger.debug('User login attempt', { userId, timestamp }); // Dev only
-logger.info('User logged in successfully', { userId });     // Normal operations
-logger.warn('Slow query detected', { duration: '5s' });     // Potential issue
-logger.error('Payment processing failed', { error, orderId }); // Error
-logger.fatal('Database connection lost');                    // Critical
+logger.debug("User login attempt", { userId, timestamp }); // Dev only
+logger.info("User logged in successfully", { userId }); // Normal operations
+logger.warn("Slow query detected", { duration: "5s" }); // Potential issue
+logger.error("Payment processing failed", { error, orderId }); // Error
+logger.fatal("Database connection lost"); // Critical
 ```
 
 ### 2. Structured Logging
 
 ```typescript
 // ✅ Good: Structured, searchable logs
-logger.info('Event processed', {
-  eventId: 'evt_123',
-  eventType: 'payment.completed',
+logger.info("Event processed", {
+  eventId: "evt_123",
+  eventType: "payment.completed",
   duration: 250,
-  status: 'success',
-  userId: 'usr_456',
+  status: "success",
+  userId: "usr_456",
   timestamp: new Date().toISOString(),
 });
 
@@ -498,13 +505,13 @@ console.log(`Event evt_123 processed in 250ms`);
 function maskSensitiveData(data: Record<string, any>) {
   return {
     ...data,
-    password: '***',
-    ssn: data.ssn?.slice(-4).padStart(data.ssn.length, '*'),
-    creditCard: data.creditCard?.slice(-4).padStart(16, '*'),
+    password: "***",
+    ssn: data.ssn?.slice(-4).padStart(data.ssn.length, "*"),
+    creditCard: data.creditCard?.slice(-4).padStart(16, "*"),
   };
 }
 
-logger.info('User created', maskSensitiveData(userData));
+logger.info("User created", maskSensitiveData(userData));
 ```
 
 ---
@@ -537,28 +544,28 @@ const delay = baseDelay * Math.pow(2, attemptNumber);
 ```typescript
 /**
  * Process a payment event and execute associated flows
- * 
+ *
  * This function is the main entry point for payment processing.
  * It validates the payment, executes all matching flows, and
  * updates the ledger atomically.
- * 
+ *
  * @param eventId - The ID of the payment event
  * @param data - Payment event data
  * @returns Promise<ProcessedEvent> The processed event result
  * @throws PaymentValidationError if payment data is invalid
  * @throws FlowExecutionError if any flow fails
- * 
+ *
  * @example
  * const result = await processPaymentEvent('evt_123', {
  *   orderId: 'ord_456',
  *   amount: 99.99,
  * });
- * 
+ *
  * @see {@link FlowEngine.execute} for flow execution details
  */
 async function processPaymentEvent(
   eventId: string,
-  data: PaymentEventData
+  data: PaymentEventData,
 ): Promise<ProcessedEvent> {
   // Implementation
 }
@@ -568,7 +575,7 @@ async function processPaymentEvent(
 
 Every module should have a README:
 
-```markdown
+````markdown
 # Event Service
 
 Description of what this module does.
@@ -578,14 +585,15 @@ Description of what this module does.
 ```bash
 npm install @sapliyio/event-service
 ```
+````
 
 ## Quick Start
 
 ```typescript
-import { EventService } from '@sapliyio/event-service';
+import { EventService } from "@sapliyio/event-service";
 
 const service = new EventService(config);
-await service.emit('event.type', data);
+await service.emit("event.type", data);
 ```
 
 ## API Reference
@@ -605,6 +613,7 @@ Real-world examples...
 ## Contributing
 
 How to contribute to this module...
+
 ```
 
 ---
@@ -614,27 +623,32 @@ How to contribute to this module...
 ### 1. Response Time Targets
 
 ```
+
 API Endpoints:
+
 - GET requests: <100ms p95
 - POST requests: <200ms p95
 - Heavy queries: <500ms p95
 
 Event Processing:
+
 - Event emit: <50ms p95
 - Flow execution: <500ms p95
 - Webhook delivery: <5s timeout
 
 Database:
+
 - Queries: <50ms p95
 - Transactions: <100ms p95
-```
+
+````
 
 ### 2. Caching Strategy
 
 ```typescript
 // ✅ Good: Cache appropriate data
-const user = await cache.get(`user:${userId}`, () => 
-  db.getUser(userId), 
+const user = await cache.get(`user:${userId}`, () =>
+  db.getUser(userId),
   { ttl: 3600 } // 1 hour cache
 );
 
@@ -643,14 +657,14 @@ async function updateUser(id: string, data: any) {
   await db.updateUser(id, data);
   await cache.delete(`user:${id}`); // Invalidate
 }
-```
+````
 
 ### 3. Database Connection Pooling
 
 ```javascript
 // ✅ Good: Configure pool limits
 const pool = new Pool({
-  max: 20,           // Max connections
+  max: 20, // Max connections
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
@@ -750,6 +764,6 @@ These standards ensure:
 ✅ Security and reliability  
 ✅ Performance and scalability  
 ✅ Ease of debugging and monitoring  
-✅ Team consistency and collaboration  
+✅ Team consistency and collaboration
 
 **All code must pass these standards before being merged to production.**

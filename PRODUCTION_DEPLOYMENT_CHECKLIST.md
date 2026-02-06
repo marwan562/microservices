@@ -9,18 +9,21 @@
 ### Code Quality & Testing
 
 - [ ] **All tests passing**
+
   ```bash
   npm run test:all
   # Expected: All unit, integration, E2E tests pass
   ```
 
 - [ ] **Code coverage >80%**
+
   ```bash
   npm run test -- --coverage
   # Expected: branches 80%, functions 80%, lines 80%
   ```
 
 - [ ] **TypeScript strict mode enabled**
+
   ```json
   {
     "compilerOptions": {
@@ -32,12 +35,14 @@
   ```
 
 - [ ] **No linting errors**
+
   ```bash
   npm run lint
   # Expected: No errors
   ```
 
 - [ ] **Security vulnerabilities fixed**
+
   ```bash
   npm run security-check
   # Expected: 0 vulnerabilities
@@ -90,6 +95,7 @@
 ### Docker Images
 
 - [ ] **All Dockerfile's optimized**
+
   ```dockerfile
   # Multi-stage build
   FROM node:18 AS builder
@@ -99,15 +105,17 @@
   ```
 
 - [ ] **Images scanned for vulnerabilities**
+
   ```bash
   docker scan sapliy:latest
   # Expected: 0 critical vulnerabilities
-  
+
   trivy image sapliy:latest
   # Expected: 0 critical, <5 high
   ```
 
 - [ ] **Images tagged properly**
+
   ```bash
   docker tag sapliy:latest sapliy:1.0.0
   docker tag sapliy:latest sapliy:stable
@@ -130,6 +138,7 @@
   - [ ] Environment variables externalized
 
 - [ ] **All services have health checks**
+
   ```yaml
   services:
     api:
@@ -163,6 +172,7 @@
 ### Database Setup
 
 - [ ] **Production PostgreSQL instance created**
+
   ```bash
   # AWS RDS example
   aws rds create-db-instance \
@@ -195,6 +205,7 @@
 ### Caching Layer (Redis)
 
 - [ ] **Redis cluster created** (production)
+
   ```bash
   # AWS ElastiCache example
   aws elasticache create-cache-cluster \
@@ -219,6 +230,7 @@
 ### Message Queue (Kafka)
 
 - [ ] **Kafka cluster provisioned**
+
   ```bash
   # AWS MSK example
   aws kafka create-cluster \
@@ -228,6 +240,7 @@
   ```
 
 - [ ] **Topics created & configured**
+
   ```bash
   kafka-topics --bootstrap-server localhost:9092 \
     --create --topic events \
@@ -243,6 +256,7 @@
 ### Kubernetes Setup (Optional)
 
 - [ ] **EKS / GKE / AKS cluster created**
+
   ```bash
   # AWS EKS example
   eksctl create cluster \
@@ -264,6 +278,7 @@
 ### Environment Variables
 
 - [ ] **All .env variables configured**
+
   ```bash
   # .env.production
   NODE_ENV=production
@@ -284,12 +299,14 @@
 ### API Server Deployment
 
 - [ ] **Docker Compose deployment**
+
   ```bash
   docker-compose -f docker-compose.prod.yml up -d
   docker-compose logs -f api
   ```
 
 - [ ] **Health checks passing**
+
   ```bash
   curl http://localhost:8080/health
   # Expected: { status: "ok" }
@@ -297,7 +314,7 @@
 
 - [ ] **Graceful shutdown configured**
   ```javascript
-  process.on('SIGTERM', async () => {
+  process.on("SIGTERM", async () => {
     await server.close();
     await db.disconnect();
     process.exit(0);
@@ -307,6 +324,7 @@
 ### Database Migrations
 
 - [ ] **All migrations tested**
+
   ```bash
   npm run migrate:up -- --dry-run
   npm run migrate:up
@@ -314,6 +332,7 @@
   ```
 
 - [ ] **Rollback tested**
+
   ```bash
   npm run migrate:down
   npm run migrate:up
@@ -343,8 +362,9 @@
   - [ ] Log retention: 30 days
 
 - [ ] **Log levels configured**
+
   ```javascript
-  logger.setLevel(process.env.LOG_LEVEL || 'info');
+  logger.setLevel(process.env.LOG_LEVEL || "info");
   // Production: info level (not debug)
   ```
 
@@ -386,10 +406,11 @@
 ### Error Tracking
 
 - [ ] **Error tracking configured** (Sentry)
+
   ```javascript
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
-    environment: 'production',
+    environment: "production",
     tracesSampleRate: 0.1,
   });
   ```
@@ -410,6 +431,7 @@
   - [ ] Cross-region replication (optional)
 
 - [ ] **Backup testing scheduled**
+
   ```bash
   # Monthly restore test
   aws rds restore-db-instance-from-db-snapshot \
@@ -446,12 +468,14 @@
 ### SSL/TLS Certificates
 
 - [ ] **Valid SSL certificate obtained**
+
   ```bash
   # Let's Encrypt via Certbot
   certbot certonly --standalone -d api.sapliy.io
   ```
 
 - [ ] **Certificate auto-renewal configured**
+
   ```bash
   # Cron job for renewal
   0 0 1 * * certbot renew --quiet
@@ -466,24 +490,31 @@
 ### API Security
 
 - [ ] **API key validation working**
+
   ```typescript
   app.use(validateApiKey);
   ```
 
 - [ ] **Rate limiting active**
+
   ```typescript
-  app.use(rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-  }));
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100,
+    }),
+  );
   ```
 
 - [ ] **CORS configured**
+
   ```javascript
-  app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS.split(','),
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: process.env.ALLOWED_ORIGINS.split(","),
+      credentials: true,
+    }),
+  );
   ```
 
 - [ ] **CSRF protection enabled** (if web UI)
@@ -498,6 +529,7 @@
   - [ ] SSH only from specific IPs
 
 - [ ] **Security groups configured**
+
   ```bash
   # Example: Allow only from load balancer
   aws ec2 authorize-security-group-ingress \
@@ -517,6 +549,7 @@
 ### Load Testing
 
 - [ ] **Load tests run successfully**
+
   ```bash
   k6 run tests/load-tests/events-load-test.js
   # Expected: 10K events/sec, <100ms p99
@@ -535,6 +568,7 @@
 ### Production Readiness Test
 
 - [ ] **Full system test in production-like environment**
+
   ```bash
   npm run test:production-like
   ```
@@ -567,18 +601,21 @@
 ### Infrastructure Verification
 
 - [ ] **All services accessible**
+
   ```bash
   curl https://api.sapliy.io/health
   curl https://app.sapliy.io
   ```
 
 - [ ] **DNS records correct**
+
   ```bash
   nslookup api.sapliy.io
   # Should resolve to correct IP
   ```
 
 - [ ] **SSL certificate valid**
+
   ```bash
   openssl s_client -connect api.sapliy.io:443
   # Check cert expiry and validity
@@ -637,19 +674,22 @@ echo "✅ Deployment complete"
 
 ### Post-Deployment Verification
 
-- [ ] **API responding** 
+- [ ] **API responding**
+
   ```bash
   curl https://api.sapliy.io/health
   # Expected: {"status":"ok"}
   ```
 
 - [ ] **Databases accessible**
+
   ```bash
   npm run db:status
   # Expected: all green
   ```
 
 - [ ] **Event processing working**
+
   ```bash
   # Emit test event
   curl -X POST https://api.sapliy.io/events \
@@ -721,7 +761,7 @@ echo "✅ Deployment complete"
 ✅ **<100ms API response time** (p95)  
 ✅ **10K+ events processed successfully**  
 ✅ **Zero data loss incidents**  
-✅ **Positive user feedback**  
+✅ **Positive user feedback**
 
 ---
 
@@ -769,15 +809,15 @@ After deployment, if issues occurred:
 
 ## Sign-Off
 
-- [ ] **CTO approved**:  ________________  Date: ________
-- [ ] **Ops lead approved**:  ________________  Date: ________
-- [ ] **Security approved**:  ________________  Date: ________
-- [ ] **Product approved**:  ________________  Date: ________
+- [ ] **CTO approved**: ******\_\_\_\_****** Date: **\_\_\_\_**
+- [ ] **Ops lead approved**: ******\_\_\_\_****** Date: **\_\_\_\_**
+- [ ] **Security approved**: ******\_\_\_\_****** Date: **\_\_\_\_**
+- [ ] **Product approved**: ******\_\_\_\_****** Date: **\_\_\_\_**
 
 ---
 
-**Go-live date**: ________________  
-**Deployed by**: ________________  
-**Deployment time**: ________ minutes  
+**Go-live date**: ******\_\_\_\_******  
+**Deployed by**: ******\_\_\_\_******  
+**Deployment time**: **\_\_\_\_** minutes  
 **Issues encountered**: ☐ None ☐ Minor ☐ Major  
-**Status**: ☐ Success ☐ Rollback  
+**Status**: ☐ Success ☐ Rollback
