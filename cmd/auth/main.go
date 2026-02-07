@@ -118,7 +118,7 @@ func main() {
 	zoneService := zone.NewService(zoneRepo, providers)
 	templateService := zone.NewTemplateService(zoneService)
 
-	handler := &AuthHandler{service: authService, hmacSecret: hmacSecret}
+	handler := &AuthHandler{service: authService, hmacSecret: hmacSecret, rdb: rdb}
 	zoneHandler := &ZoneHandler{service: zoneService, templateService: templateService}
 
 	// Initialize Tracer
@@ -174,6 +174,11 @@ func main() {
 	mux.HandleFunc("/reset-password", handler.ResetPassword)
 	mux.HandleFunc("/verify-email", handler.VerifyEmail)
 	mux.HandleFunc("/resend-verification", handler.ResendVerification)
+
+	// Debug endpoints
+	if os.Getenv("GO_ENV") == "test" || os.Getenv("ENABLE_DEBUG_ENDPOINTS") == "true" {
+		mux.HandleFunc("/debug/tokens", handler.DebugGetTokens)
+	}
 
 	// Zone Management
 	mux.HandleFunc("/zones", func(w http.ResponseWriter, r *http.Request) {

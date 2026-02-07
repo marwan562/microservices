@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/sapliy/fintech-ecosystem/internal/auth/domain"
 	"github.com/sapliy/fintech-ecosystem/pkg/apikey"
 	"github.com/sapliy/fintech-ecosystem/pkg/bcryptutil"
@@ -198,6 +199,7 @@ func (h *AuthHandler) CreateOrganization(w http.ResponseWriter, r *http.Request)
 type AuthHandler struct {
 	service    *domain.AuthService
 	hmacSecret string
+	rdb        *redis.Client
 }
 
 // RegisterRequest defines the payload for user registration.
@@ -214,7 +216,8 @@ type LoginRequest struct {
 
 // LoginResponse defines the successful response for login.
 type LoginResponse struct {
-	Token string `json:"token"`
+	Token string       `json:"token"`
+	User  *domain.User `json:"user"`
 }
 
 // Register handles user account creation.
@@ -246,6 +249,20 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		jsonutil.WriteErrorJSON(w, "Failed to create user (email might be taken)")
 		return
+	}
+
+	// Generate verification token
+	token, err := h.service.CreateEmailVerificationToken(r.Context(), user.ID)
+	if err != nil {
+		// Log error but don't fail registration
+		log.Printf("Register: Failed to create verification token: %v", err)
+	} else {
+		log.Printf("Email verification token for %s: %s", user.Email, token)
+
+		// Store in Redis for debug/testing
+		if h.rdb != nil {
+			h.rdb.Set(r.Context(), "debug:verify:"+user.Email, token, 1*time.Hour)
+		}
 	}
 
 	jsonutil.WriteJSON(w, http.StatusCreated, user)
@@ -292,8 +309,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Hide password hash in response
+	user.Password = ""
+
 	log.Printf("Login: Success for user %s", user.Email)
-	jsonutil.WriteJSON(w, http.StatusOK, LoginResponse{Token: token})
+	jsonutil.WriteJSON(w, http.StatusOK, LoginResponse{
+		Token: token,
+		User:  user,
+	})
 }
 
 // OAuthTokenResponse represents the response for /oauth/token.
@@ -809,7 +832,13 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the token for testing purposes (in production, send via email)
+	// Log the token for testing purposes (in production, send via email)
 	log.Printf("Password reset token for %s: %s", user.Email, token)
+
+	// Store in Redis for debug/testing
+	if h.rdb != nil {
+		h.rdb.Set(r.Context(), "debug:reset:"+user.Email, token, 1*time.Hour)
+	}
 
 	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
 		"message": "If an account with that email exists, a password reset link has been sent.",
@@ -952,7 +981,49 @@ func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request)
 	// Log the token for testing purposes (in production, send via email)
 	log.Printf("Email verification token for %s: %s", user.Email, token)
 
+	// Store in Redis for debug/testing
+	if h.rdb != nil {
+		h.rdb.Set(r.Context(), "debug:verify:"+user.Email, token, 1*time.Hour)
+	}
+
 	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
 		"message": "If an unverified account with that email exists, a verification email has been sent.",
+	})
+}
+
+// DebugGetTokensRequest defines payload for debug token retrieval
+type DebugGetTokensRequest struct {
+	Email string `json:"email"`
+	Type  string `json:"type"` // "verify" or "reset"
+}
+
+// DebugGetTokens returns the latest token for an email (Debug only)
+func (h *AuthHandler) DebugGetTokens(w http.ResponseWriter, r *http.Request) {
+	if h.rdb == nil {
+		jsonutil.WriteErrorJSON(w, "Debug store not available")
+		return
+	}
+
+	// Simple query param or body
+	email := r.URL.Query().Get("email")
+	tokenType := r.URL.Query().Get("type")
+
+	if email == "" || tokenType == "" {
+		jsonutil.WriteErrorJSON(w, "email and type required")
+		return
+	}
+
+	key := "debug:" + tokenType + ":" + email
+	token, err := h.rdb.Get(r.Context(), key).Result()
+	if err == redis.Nil {
+		jsonutil.WriteErrorJSON(w, "Token not found")
+		return
+	} else if err != nil {
+		jsonutil.WriteErrorJSON(w, "Error fetching token")
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+		"token": token,
 	})
 }
