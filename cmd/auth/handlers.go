@@ -795,9 +795,11 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 	var req ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("ForgotPassword: Decode error: %v", err)
 		jsonutil.WriteErrorJSON(w, "Invalid request body")
 		return
 	}
+	log.Printf("ForgotPassword: Received request for email: '%s'", req.Email)
 
 	if req.Email == "" {
 		jsonutil.WriteErrorJSON(w, "Email is required")
@@ -1007,6 +1009,8 @@ func (h *AuthHandler) DebugGetTokens(w http.ResponseWriter, r *http.Request) {
 	// Simple query param or body
 	email := r.URL.Query().Get("email")
 	tokenType := r.URL.Query().Get("type")
+
+	log.Printf("DebugGetTokens: email='%s', type='%s'", email, tokenType)
 
 	if email == "" || tokenType == "" {
 		jsonutil.WriteErrorJSON(w, "email and type required")
