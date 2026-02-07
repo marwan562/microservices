@@ -11,6 +11,18 @@ type Repository interface {
 	GetUserByID(ctx context.Context, id string) (*User, error)
 	GetUserByExternalID(ctx context.Context, provider, providerUserID string) (*User, error)
 	LinkExternalIdentity(ctx context.Context, userID, provider, providerUserID string) error
+	UpdateUserPassword(ctx context.Context, userID, passwordHash string) error
+	SetEmailVerified(ctx context.Context, userID string) error
+
+	// Password Reset Token methods
+	CreatePasswordResetToken(ctx context.Context, token *PasswordResetToken) error
+	GetPasswordResetToken(ctx context.Context, tokenHash string) (*PasswordResetToken, error)
+	MarkPasswordResetTokenUsed(ctx context.Context, tokenHash string) error
+
+	// Email Verification Token methods
+	CreateEmailVerificationToken(ctx context.Context, token *EmailVerificationToken) error
+	GetEmailVerificationToken(ctx context.Context, tokenHash string) (*EmailVerificationToken, error)
+	MarkEmailVerificationTokenUsed(ctx context.Context, tokenHash string) error
 
 	// Organization methods
 	CreateOrganization(ctx context.Context, name, domain string) (*Organization, error)

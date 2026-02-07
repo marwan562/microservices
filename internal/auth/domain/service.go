@@ -195,3 +195,111 @@ func (s *AuthService) VerifyCodeChallenge(codeVerifier, codeChallenge, method st
 	// Default to plain
 	return codeVerifier == codeChallenge
 }
+
+// Password Reset methods
+
+func (s *AuthService) CreatePasswordResetToken(ctx context.Context, userID string) (string, error) {
+	// Generate a random token
+	rawToken, err := s.GenerateRandomString(32)
+	if err != nil {
+		return "", err
+	}
+
+	// Hash the token for storage
+	tokenHash := s.HashString(rawToken)
+
+	token := &PasswordResetToken{
+		ID:        fmt.Sprintf("prt_%d", time.Now().UnixNano()),
+		UserID:    userID,
+		Token:     tokenHash,
+		ExpiresAt: time.Now().Add(1 * time.Hour), // 1 hour expiry
+	}
+
+	if err := s.repo.CreatePasswordResetToken(ctx, token); err != nil {
+		return "", err
+	}
+
+	return rawToken, nil
+}
+
+func (s *AuthService) ValidatePasswordResetToken(ctx context.Context, rawToken string) (*PasswordResetToken, error) {
+	tokenHash := s.HashString(rawToken)
+	token, err := s.repo.GetPasswordResetToken(ctx, tokenHash)
+	if err != nil {
+		return nil, err
+	}
+	if token == nil {
+		return nil, fmt.Errorf("invalid reset token")
+	}
+	if token.UsedAt != nil {
+		return nil, fmt.Errorf("reset token already used")
+	}
+	if time.Now().After(token.ExpiresAt) {
+		return nil, fmt.Errorf("reset token expired")
+	}
+	return token, nil
+}
+
+func (s *AuthService) ResetPassword(ctx context.Context, rawToken, newPasswordHash string) error {
+	token, err := s.ValidatePasswordResetToken(ctx, rawToken)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.UpdateUserPassword(ctx, token.UserID, newPasswordHash); err != nil {
+		return err
+	}
+
+	return s.repo.MarkPasswordResetTokenUsed(ctx, s.HashString(rawToken))
+}
+
+// Email Verification methods
+
+func (s *AuthService) CreateEmailVerificationToken(ctx context.Context, userID string) (string, error) {
+	rawToken, err := s.GenerateRandomString(32)
+	if err != nil {
+		return "", err
+	}
+
+	tokenHash := s.HashString(rawToken)
+
+	token := &EmailVerificationToken{
+		ID:        fmt.Sprintf("evt_%d", time.Now().UnixNano()),
+		UserID:    userID,
+		Token:     tokenHash,
+		ExpiresAt: time.Now().Add(24 * time.Hour), // 24 hour expiry
+	}
+
+	if err := s.repo.CreateEmailVerificationToken(ctx, token); err != nil {
+		return "", err
+	}
+
+	return rawToken, nil
+}
+
+func (s *AuthService) VerifyEmail(ctx context.Context, rawToken string) error {
+	tokenHash := s.HashString(rawToken)
+	token, err := s.repo.GetEmailVerificationToken(ctx, tokenHash)
+	if err != nil {
+		return err
+	}
+	if token == nil {
+		return fmt.Errorf("invalid verification token")
+	}
+	if token.UsedAt != nil {
+		return fmt.Errorf("verification token already used")
+	}
+	if time.Now().After(token.ExpiresAt) {
+		return fmt.Errorf("verification token expired")
+	}
+
+	if err := s.repo.SetEmailVerified(ctx, token.UserID); err != nil {
+		return err
+	}
+
+	return s.repo.MarkEmailVerificationTokenUsed(ctx, tokenHash)
+}
+
+func (s *AuthService) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
+	return s.repo.UpdateUserPassword(ctx, userID, passwordHash)
+}

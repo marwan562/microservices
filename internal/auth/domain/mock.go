@@ -5,35 +5,43 @@ import (
 )
 
 type MockRepository struct {
-	CreateUserFunc                func(ctx context.Context, email, passwordHash string) (*User, error)
-	GetUserByEmailFunc            func(ctx context.Context, email string) (*User, error)
-	GetUserByIDFunc               func(ctx context.Context, id string) (*User, error)
-	GetUserByExternalIDFunc       func(ctx context.Context, provider, providerUserID string) (*User, error)
-	LinkExternalIdentityFunc      func(ctx context.Context, userID, provider, providerUserID string) error
-	CreateOrganizationFunc        func(ctx context.Context, name, domain string) (*Organization, error)
-	GetOrganizationFunc           func(ctx context.Context, id string) (*Organization, error)
-	AddMemberFunc                 func(ctx context.Context, userID, orgID, role string) error
-	RemoveMemberFunc              func(ctx context.Context, userID, orgID string) error
-	UpdateMemberRoleFunc          func(ctx context.Context, userID, orgID, role string) error
-	ListOrgMembersFunc            func(ctx context.Context, orgID string) ([]Membership, error)
-	GetUserMembershipsFunc        func(ctx context.Context, userID string) ([]Membership, error)
-	GetMembershipFunc             func(ctx context.Context, userID, orgID string) (*Membership, error)
-	CreateAPIKeyFunc              func(ctx context.Context, key *APIKey) error
-	GetAPIKeyByHashFunc           func(ctx context.Context, hash string) (*APIKey, error)
-	GetClientByIDFunc             func(ctx context.Context, clientID string) (*OAuthClient, error)
-	CreateOAuthClientFunc         func(ctx context.Context, client *OAuthClient) error
-	AddRedirectURIFunc            func(ctx context.Context, clientID, redirectURI string) error
-	ValidateRedirectURIFunc       func(ctx context.Context, clientID, redirectURI string) (bool, error)
-	CreateOAuthTokenFunc          func(ctx context.Context, token *OAuthToken) error
-	ValidateOAuthTokenFunc        func(ctx context.Context, accessToken string) (*OAuthToken, error)
-	CreateAuthorizationCodeFunc   func(ctx context.Context, code *AuthorizationCode) error
-	GetAuthorizationCodeFunc      func(ctx context.Context, code string) (*AuthorizationCode, error)
-	MarkAuthorizationCodeUsedFunc func(ctx context.Context, code string) error
-	CreateSSOProviderFunc         func(ctx context.Context, p *SSOProvider) error
-	GetSSOProviderByIDFunc        func(ctx context.Context, id string) (*SSOProvider, error)
-	GetSSOProviderByDomainFunc    func(ctx context.Context, domain string) (*SSOProvider, error)
-	CreateAuditLogFunc            func(ctx context.Context, log *AuditLog) error
-	GetAuditLogsFunc              func(ctx context.Context, orgID string, limit, offset int, action string) ([]AuditLog, int, error)
+	CreateUserFunc                     func(ctx context.Context, email, passwordHash string) (*User, error)
+	GetUserByEmailFunc                 func(ctx context.Context, email string) (*User, error)
+	GetUserByIDFunc                    func(ctx context.Context, id string) (*User, error)
+	GetUserByExternalIDFunc            func(ctx context.Context, provider, providerUserID string) (*User, error)
+	LinkExternalIdentityFunc           func(ctx context.Context, userID, provider, providerUserID string) error
+	UpdateUserPasswordFunc             func(ctx context.Context, userID, passwordHash string) error
+	SetEmailVerifiedFunc               func(ctx context.Context, userID string) error
+	CreatePasswordResetTokenFunc       func(ctx context.Context, token *PasswordResetToken) error
+	GetPasswordResetTokenFunc          func(ctx context.Context, tokenHash string) (*PasswordResetToken, error)
+	MarkPasswordResetTokenUsedFunc     func(ctx context.Context, tokenHash string) error
+	CreateEmailVerificationTokenFunc   func(ctx context.Context, token *EmailVerificationToken) error
+	GetEmailVerificationTokenFunc      func(ctx context.Context, tokenHash string) (*EmailVerificationToken, error)
+	MarkEmailVerificationTokenUsedFunc func(ctx context.Context, tokenHash string) error
+	CreateOrganizationFunc             func(ctx context.Context, name, domain string) (*Organization, error)
+	GetOrganizationFunc                func(ctx context.Context, id string) (*Organization, error)
+	AddMemberFunc                      func(ctx context.Context, userID, orgID, role string) error
+	RemoveMemberFunc                   func(ctx context.Context, userID, orgID string) error
+	UpdateMemberRoleFunc               func(ctx context.Context, userID, orgID, role string) error
+	ListOrgMembersFunc                 func(ctx context.Context, orgID string) ([]Membership, error)
+	GetUserMembershipsFunc             func(ctx context.Context, userID string) ([]Membership, error)
+	GetMembershipFunc                  func(ctx context.Context, userID, orgID string) (*Membership, error)
+	CreateAPIKeyFunc                   func(ctx context.Context, key *APIKey) error
+	GetAPIKeyByHashFunc                func(ctx context.Context, hash string) (*APIKey, error)
+	GetClientByIDFunc                  func(ctx context.Context, clientID string) (*OAuthClient, error)
+	CreateOAuthClientFunc              func(ctx context.Context, client *OAuthClient) error
+	AddRedirectURIFunc                 func(ctx context.Context, clientID, redirectURI string) error
+	ValidateRedirectURIFunc            func(ctx context.Context, clientID, redirectURI string) (bool, error)
+	CreateOAuthTokenFunc               func(ctx context.Context, token *OAuthToken) error
+	ValidateOAuthTokenFunc             func(ctx context.Context, accessToken string) (*OAuthToken, error)
+	CreateAuthorizationCodeFunc        func(ctx context.Context, code *AuthorizationCode) error
+	GetAuthorizationCodeFunc           func(ctx context.Context, code string) (*AuthorizationCode, error)
+	MarkAuthorizationCodeUsedFunc      func(ctx context.Context, code string) error
+	CreateSSOProviderFunc              func(ctx context.Context, p *SSOProvider) error
+	GetSSOProviderByIDFunc             func(ctx context.Context, id string) (*SSOProvider, error)
+	GetSSOProviderByDomainFunc         func(ctx context.Context, domain string) (*SSOProvider, error)
+	CreateAuditLogFunc                 func(ctx context.Context, log *AuditLog) error
+	GetAuditLogsFunc                   func(ctx context.Context, orgID string, limit, offset int, action string) ([]AuditLog, int, error)
 }
 
 func (m *MockRepository) CreateUser(ctx context.Context, email, passwordHash string) (*User, error) {
@@ -150,4 +158,64 @@ func (m *MockRepository) CreateAuditLog(ctx context.Context, log *AuditLog) erro
 
 func (m *MockRepository) GetAuditLogs(ctx context.Context, orgID string, limit, offset int, action string) ([]AuditLog, int, error) {
 	return m.GetAuditLogsFunc(ctx, orgID, limit, offset, action)
+}
+
+// Password Reset Token methods
+
+func (m *MockRepository) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
+	if m.UpdateUserPasswordFunc != nil {
+		return m.UpdateUserPasswordFunc(ctx, userID, passwordHash)
+	}
+	return nil
+}
+
+func (m *MockRepository) SetEmailVerified(ctx context.Context, userID string) error {
+	if m.SetEmailVerifiedFunc != nil {
+		return m.SetEmailVerifiedFunc(ctx, userID)
+	}
+	return nil
+}
+
+func (m *MockRepository) CreatePasswordResetToken(ctx context.Context, token *PasswordResetToken) error {
+	if m.CreatePasswordResetTokenFunc != nil {
+		return m.CreatePasswordResetTokenFunc(ctx, token)
+	}
+	return nil
+}
+
+func (m *MockRepository) GetPasswordResetToken(ctx context.Context, tokenHash string) (*PasswordResetToken, error) {
+	if m.GetPasswordResetTokenFunc != nil {
+		return m.GetPasswordResetTokenFunc(ctx, tokenHash)
+	}
+	return nil, nil
+}
+
+func (m *MockRepository) MarkPasswordResetTokenUsed(ctx context.Context, tokenHash string) error {
+	if m.MarkPasswordResetTokenUsedFunc != nil {
+		return m.MarkPasswordResetTokenUsedFunc(ctx, tokenHash)
+	}
+	return nil
+}
+
+// Email Verification Token methods
+
+func (m *MockRepository) CreateEmailVerificationToken(ctx context.Context, token *EmailVerificationToken) error {
+	if m.CreateEmailVerificationTokenFunc != nil {
+		return m.CreateEmailVerificationTokenFunc(ctx, token)
+	}
+	return nil
+}
+
+func (m *MockRepository) GetEmailVerificationToken(ctx context.Context, tokenHash string) (*EmailVerificationToken, error) {
+	if m.GetEmailVerificationTokenFunc != nil {
+		return m.GetEmailVerificationTokenFunc(ctx, tokenHash)
+	}
+	return nil, nil
+}
+
+func (m *MockRepository) MarkEmailVerificationTokenUsed(ctx context.Context, tokenHash string) error {
+	if m.MarkEmailVerificationTokenUsedFunc != nil {
+		return m.MarkEmailVerificationTokenUsedFunc(ctx, tokenHash)
+	}
+	return nil
 }

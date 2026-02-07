@@ -7,11 +7,33 @@ import (
 
 // User represents a registered user in the system.
 type User struct {
-	ID        string    `json:"id"`
-	OrgID     string    `json:"org_id,omitempty"` // Primary or current organization
-	Email     string    `json:"email"`
-	Password  string    `json:"-"` // Never return password
-	CreatedAt time.Time `json:"created_at"`
+	ID              string     `json:"id"`
+	OrgID           string     `json:"org_id,omitempty"` // Primary or current organization
+	Email           string     `json:"email"`
+	Password        string     `json:"-"` // Never return password
+	EmailVerified   bool       `json:"email_verified"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+}
+
+// PasswordResetToken represents a token for password reset requests.
+type PasswordResetToken struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Token     string     `json:"-"` // Hashed token
+	ExpiresAt time.Time  `json:"expires_at"`
+	UsedAt    *time.Time `json:"used_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// EmailVerificationToken represents a token for email verification.
+type EmailVerificationToken struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Token     string     `json:"-"` // Hashed token
+	ExpiresAt time.Time  `json:"expires_at"`
+	UsedAt    *time.Time `json:"used_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 // Organization represents a team or company.

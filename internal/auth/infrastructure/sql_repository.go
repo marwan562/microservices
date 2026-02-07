@@ -96,6 +96,114 @@ func (r *SQLRepository) LinkExternalIdentity(ctx context.Context, userID, provid
 	return err
 }
 
+func (r *SQLRepository) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET password_hash = $1 WHERE id = $2`,
+		passwordHash, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+func (r *SQLRepository) SetEmailVerified(ctx context.Context, userID string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET email_verified = TRUE, email_verified_at = NOW() WHERE id = $1`,
+		userID)
+	if err != nil {
+		return fmt.Errorf("failed to set email verified: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// Password Reset Token methods
+
+func (r *SQLRepository) CreatePasswordResetToken(ctx context.Context, token *domain.PasswordResetToken) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)`,
+		token.ID, token.UserID, token.Token, token.ExpiresAt)
+	if err != nil {
+		return fmt.Errorf("failed to create password reset token: %w", err)
+	}
+	return nil
+}
+
+func (r *SQLRepository) GetPasswordResetToken(ctx context.Context, tokenHash string) (*domain.PasswordResetToken, error) {
+	var token domain.PasswordResetToken
+	err := r.db.QueryRowContext(ctx,
+		`SELECT id, user_id, token_hash, expires_at, used_at, created_at FROM password_reset_tokens WHERE token_hash = $1`,
+		tokenHash).Scan(&token.ID, &token.UserID, &token.Token, &token.ExpiresAt, &token.UsedAt, &token.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get password reset token: %w", err)
+	}
+	return &token, nil
+}
+
+func (r *SQLRepository) MarkPasswordResetTokenUsed(ctx context.Context, tokenHash string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE password_reset_tokens SET used_at = NOW() WHERE token_hash = $1 AND used_at IS NULL`,
+		tokenHash)
+	if err != nil {
+		return fmt.Errorf("failed to mark token used: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("token already used or not found")
+	}
+	return nil
+}
+
+// Email Verification Token methods
+
+func (r *SQLRepository) CreateEmailVerificationToken(ctx context.Context, token *domain.EmailVerificationToken) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)`,
+		token.ID, token.UserID, token.Token, token.ExpiresAt)
+	if err != nil {
+		return fmt.Errorf("failed to create email verification token: %w", err)
+	}
+	return nil
+}
+
+func (r *SQLRepository) GetEmailVerificationToken(ctx context.Context, tokenHash string) (*domain.EmailVerificationToken, error) {
+	var token domain.EmailVerificationToken
+	err := r.db.QueryRowContext(ctx,
+		`SELECT id, user_id, token_hash, expires_at, used_at, created_at FROM email_verification_tokens WHERE token_hash = $1`,
+		tokenHash).Scan(&token.ID, &token.UserID, &token.Token, &token.ExpiresAt, &token.UsedAt, &token.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get email verification token: %w", err)
+	}
+	return &token, nil
+}
+
+func (r *SQLRepository) MarkEmailVerificationTokenUsed(ctx context.Context, tokenHash string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE email_verification_tokens SET used_at = NOW() WHERE token_hash = $1 AND used_at IS NULL`,
+		tokenHash)
+	if err != nil {
+		return fmt.Errorf("failed to mark token used: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("token already used or not found")
+	}
+	return nil
+}
+
 // Organization methods
 
 func (r *SQLRepository) CreateOrganization(ctx context.Context, name, domainName string) (*domain.Organization, error) {

@@ -169,6 +169,12 @@ func main() {
 	mux.HandleFunc("/events/trigger", handler.TriggerEvent)
 	mux.HandleFunc("/sso/callback", handler.SSOCallback)
 
+	// Password Reset and Email Verification
+	mux.HandleFunc("/forgot-password", handler.ForgotPassword)
+	mux.HandleFunc("/reset-password", handler.ResetPassword)
+	mux.HandleFunc("/verify-email", handler.VerifyEmail)
+	mux.HandleFunc("/resend-verification", handler.ResendVerification)
+
 	// Zone Management
 	mux.HandleFunc("/zones", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

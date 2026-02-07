@@ -755,3 +755,204 @@ func (h *AuthHandler) TriggerEvent(w http.ResponseWriter, r *http.Request) {
 	// For now, return success to indicate the API is wired
 	jsonutil.WriteJSON(w, http.StatusAccepted, map[string]string{"status": "event_queued"})
 }
+
+// Password Reset Handlers
+
+// ForgotPasswordRequest defines the payload for forgot password requests.
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// ForgotPassword handles password reset requests.
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		return
+	}
+
+	var req ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.Email == "" {
+		jsonutil.WriteErrorJSON(w, "Email is required")
+		return
+	}
+
+	// Get user by email
+	user, err := h.service.GetUserByEmail(r.Context(), req.Email)
+	if err != nil {
+		log.Printf("ForgotPassword: Error getting user: %v", err)
+		// Don't reveal if user exists
+		jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+			"message": "If an account with that email exists, a password reset link has been sent.",
+		})
+		return
+	}
+
+	if user == nil {
+		// Don't reveal if user exists - return same message
+		jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+			"message": "If an account with that email exists, a password reset link has been sent.",
+		})
+		return
+	}
+
+	// Generate reset token
+	token, err := h.service.CreatePasswordResetToken(r.Context(), user.ID)
+	if err != nil {
+		log.Printf("ForgotPassword: Error creating reset token: %v", err)
+		jsonutil.WriteErrorJSON(w, "Failed to process request")
+		return
+	}
+
+	// Log the token for testing purposes (in production, send via email)
+	log.Printf("Password reset token for %s: %s", user.Email, token)
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+		"message": "If an account with that email exists, a password reset link has been sent.",
+	})
+}
+
+// ResetPasswordRequest defines the payload for password reset.
+type ResetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
+}
+
+// ResetPassword handles password reset with token validation.
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		return
+	}
+
+	var req ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.Token == "" || req.NewPassword == "" {
+		jsonutil.WriteErrorJSON(w, "Token and new password are required")
+		return
+	}
+
+	if len(req.NewPassword) < 8 {
+		jsonutil.WriteErrorJSON(w, "Password must be at least 8 characters")
+		return
+	}
+
+	// Hash the new password
+	b := &bcryptutil.BcryptUtilsImpl{}
+	hashedPassword, err := b.GenerateHash(req.NewPassword)
+	if err != nil {
+		log.Printf("ResetPassword: Error hashing password: %v", err)
+		jsonutil.WriteErrorJSON(w, "Failed to process request")
+		return
+	}
+
+	// Reset the password
+	if err := h.service.ResetPassword(r.Context(), req.Token, hashedPassword); err != nil {
+		log.Printf("ResetPassword: Error resetting password: %v", err)
+		jsonutil.WriteErrorJSON(w, "Invalid or expired reset token")
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+		"message": "Password has been reset successfully.",
+	})
+}
+
+// Email Verification Handlers
+
+// VerifyEmailRequest defines the payload for email verification.
+type VerifyEmailRequest struct {
+	Token string `json:"token"`
+}
+
+// VerifyEmail handles email verification with token.
+func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		return
+	}
+
+	var req VerifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.Token == "" {
+		jsonutil.WriteErrorJSON(w, "Verification token is required")
+		return
+	}
+
+	if err := h.service.VerifyEmail(r.Context(), req.Token); err != nil {
+		log.Printf("VerifyEmail: Error verifying email: %v", err)
+		jsonutil.WriteErrorJSON(w, "Invalid or expired verification token")
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+		"message": "Email has been verified successfully.",
+	})
+}
+
+// ResendVerificationRequest defines the payload for resending verification.
+type ResendVerificationRequest struct {
+	Email string `json:"email"`
+}
+
+// ResendVerification handles resending email verification.
+func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		return
+	}
+
+	var req ResendVerificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.Email == "" {
+		jsonutil.WriteErrorJSON(w, "Email is required")
+		return
+	}
+
+	user, err := h.service.GetUserByEmail(r.Context(), req.Email)
+	if err != nil || user == nil {
+		// Don't reveal if user exists
+		jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+			"message": "If an unverified account with that email exists, a verification email has been sent.",
+		})
+		return
+	}
+
+	if user.EmailVerified {
+		jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+			"message": "Email is already verified.",
+		})
+		return
+	}
+
+	// Generate verification token
+	token, err := h.service.CreateEmailVerificationToken(r.Context(), user.ID)
+	if err != nil {
+		log.Printf("ResendVerification: Error creating verification token: %v", err)
+		jsonutil.WriteErrorJSON(w, "Failed to process request")
+		return
+	}
+
+	// Log the token for testing purposes (in production, send via email)
+	log.Printf("Email verification token for %s: %s", user.Email, token)
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{
+		"message": "If an unverified account with that email exists, a verification email has been sent.",
+	})
+}
