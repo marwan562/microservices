@@ -8,7 +8,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/sapliy/fintech-ecosystem/internal/flow/domain"
 	"github.com/sapliy/fintech-ecosystem/internal/flow/infrastructure"
 	"github.com/sapliy/fintech-ecosystem/pkg/database"
@@ -32,13 +34,18 @@ func main() {
 	repo := infrastructure.NewSQLRepository(db)
 	runner := domain.NewFlowRunner(repo)
 
-	// Setup Kafka Consumer
+	// Setup Redis client for Streams
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
+
+	// Setup Kafka Consumer (legacy support)
 	brokers := strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
 	if len(brokers) == 0 || brokers[0] == "" {
 		brokers = []string{"localhost:9092"}
 	}
-
-	// One consumer per topic for now, or just focus on "payments"
 	consumer := messaging.NewKafkaConsumer(brokers, "payments", "flow-runner-group")
 
 	// Initialize Tracer
@@ -52,6 +59,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Start Redis Streams consumer in a separate goroutine
+	go consumeRedisStreams(ctx, rdb, repo, runner)
+
+	// Kafka consumer (blocking)
 	consumer.Consume(ctx, func(key string, value []byte) error {
 		var event map[string]interface{}
 		if err := json.Unmarshal(value, &event); err != nil {
@@ -83,8 +94,107 @@ func main() {
 		return nil
 	})
 
-	// consumer.Consume is blocking
 	log.Println("Flow Runner exited")
+}
+
+// consumeRedisStreams listens to zone-scoped event streams and triggers flows
+func consumeRedisStreams(ctx context.Context, rdb *redis.Client, repo domain.Repository, runner *domain.FlowRunner) {
+	consumerGroup := "flow-runner-group"
+	consumerName := "flow-runner-1"
+
+	// Get all zones and subscribe to their event streams
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		// Dynamically discover streams by pattern (zone.*.event.*)
+		keys, err := rdb.Keys(ctx, "zone.*.event.*").Result()
+		if err != nil {
+			log.Printf("Redis Keys error: %v", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		for _, stream := range keys {
+			// Create consumer group if not exists
+			rdb.XGroupCreateMkStream(ctx, stream, consumerGroup, "0").Err()
+
+			// Read new messages
+			result, err := rdb.XReadGroup(ctx, &redis.XReadGroupArgs{
+				Group:    consumerGroup,
+				Consumer: consumerName,
+				Streams:  []string{stream, ">"},
+				Count:    10,
+				Block:    time.Second,
+			}).Result()
+
+			if err != nil {
+				if err != redis.Nil {
+					log.Printf("XReadGroup error: %v", err)
+				}
+				continue
+			}
+
+			for _, xstream := range result {
+				for _, msg := range xstream.Messages {
+					processStreamMessage(ctx, xstream.Stream, msg, repo, runner)
+
+					// Acknowledge message
+					rdb.XAck(ctx, xstream.Stream, consumerGroup, msg.ID)
+				}
+			}
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func processStreamMessage(ctx context.Context, stream string, msg redis.XMessage, repo domain.Repository, runner *domain.FlowRunner) {
+	// Parse stream name: zone.{zone_id}.event.{event_type}
+	parts := strings.Split(stream, ".")
+	if len(parts) < 4 {
+		return
+	}
+
+	zoneID := parts[1]
+	eventType := parts[3]
+
+	data, ok := msg.Values["data"].(string)
+	if !ok {
+		return
+	}
+
+	var payload map[string]interface{}
+	json.Unmarshal([]byte(data), &payload)
+
+	event := map[string]interface{}{
+		"zone_id": zoneID,
+		"type":    eventType,
+		"data":    payload,
+	}
+
+	log.Printf("Processing event from stream %s: type=%s", stream, eventType)
+
+	// Find matching flows for this zone
+	flows, err := repo.ListFlows(ctx, zoneID)
+	if err != nil {
+		log.Printf("Failed to list flows for zone %s: %v", zoneID, err)
+		return
+	}
+
+	for _, f := range flows {
+		if f.Enabled && matchesTrigger(f, eventType, event) {
+			go func(flow *domain.Flow) {
+				log.Printf("Executing flow %s for event %s", flow.ID, eventType)
+				if err := runner.Execute(ctx, flow, event); err != nil {
+					log.Printf("Flow %s failed: %v", flow.ID, err)
+				}
+			}(f)
+		}
+	}
 }
 
 func matchesTrigger(flow *domain.Flow, topic string, event map[string]interface{}) bool {

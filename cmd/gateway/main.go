@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -74,14 +75,14 @@ func NewGatewayHandler(auth, payment, ledger, wallet, billing, events, notificat
 }
 
 // validateKeyWithAuthService calls the Auth service to validate the API key hash.
-func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, string, string, int32, string, string, bool) {
+func (h *GatewayHandler) validateKeyWithAuthService(ctx context.Context, keyHash string) (string, string, string, string, string, int32, string, string, string, bool) {
 	res, err := h.authClient.ValidateKey(ctx, &pb.ValidateKeyRequest{KeyHash: keyHash})
 	if err != nil {
 		h.logger.Error("Auth service gRPC validation call failed", "error", err)
-		return "", "", "", "", "", 0, "", "", false
+		return "", "", "", "", "", 0, "", "", "", false
 	}
 
-	return res.UserId, res.Environment, res.Scopes, res.OrgId, res.Role, res.RateLimitQuota, res.ZoneId, res.Mode, res.Valid
+	return res.UserId, res.Environment, res.Scopes, res.OrgId, res.Role, res.RateLimitQuota, res.ZoneId, res.Mode, res.KeyType, res.Valid
 }
 
 // checkRateLimit checks if the key has exceeded its quota.
@@ -144,7 +145,6 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	h.logger.Info("Incoming request", "method", r.Method, "path", path)
 
-
 	if strings.HasPrefix(path, "/auth") || path == "/health" {
 		h.logger.Debug("Routing public path", "path", path)
 		h.routePublic(w, r)
@@ -162,7 +162,7 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		apiKey = r.URL.Query().Get("api_key")
 	}
 
-	if apiKey == "" || !strings.HasPrefix(apiKey, "sk_") {
+	if apiKey == "" || (!strings.HasPrefix(apiKey, "sk_") && !strings.HasPrefix(apiKey, "pk_")) {
 		jsonutil.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "Missing or invalid API Key"})
 		return
 	}
@@ -171,9 +171,15 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	keyHash := apikey.HashKey(apiKey, h.hmacSecret)
 
 	// Validate with Auth Service
-	userID, env, keyScopes, orgID, role, quota, zoneID, mode, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
+	userID, env, keyScopes, orgID, role, quota, zoneID, mode, keyType, valid := h.validateKeyWithAuthService(r.Context(), keyHash)
 	if !valid {
 		jsonutil.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid or revoked API Key"})
+		return
+	}
+
+	// Key Type Enforcement (Example: pk_ keys can only emit events)
+	if keyType == "publishable" && !strings.HasPrefix(path, "/v1/events/emit") {
+		jsonutil.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "Publishable keys only allowed for event emission"})
 		return
 	}
 
@@ -244,6 +250,10 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.handleWebSocket(w, r)
 			return
 		}
+		if p == "/events/emit" && r.Method == http.MethodPost {
+			h.handleEventEmit(w, r)
+			return
+		}
 		h.proxyRequest(h.eventsServiceURL, w, r)
 
 	case p == "/ws": // Legacy or alternative WS path
@@ -290,6 +300,63 @@ func (h *GatewayHandler) handleWebSocket(w http.ResponseWriter, r *http.Request)
 			break
 		}
 	}
+}
+
+type EventEmitRequest struct {
+	Type string         `json:"type"`
+	Data map[string]any `json:"data"`
+}
+
+func (h *GatewayHandler) handleEventEmit(w http.ResponseWriter, r *http.Request) {
+	zoneID := r.Header.Get("X-Zone-ID")
+	if zoneID == "" {
+		jsonutil.WriteErrorJSON(w, "Zone context missing")
+		return
+	}
+
+	idempotencyKey := r.Header.Get("Idempotency-Key")
+	if idempotencyKey != "" {
+		// Check Redis for existing idempotency key
+		exists, err := h.rdb.Exists(r.Context(), "idempotency:"+idempotencyKey).Result()
+		if err == nil && exists > 0 {
+			jsonutil.WriteJSON(w, http.StatusAccepted, map[string]string{"status": "duplicate", "message": "Event already processed"})
+			return
+		}
+		// Set idempotency key with 24h expiration
+		h.rdb.Set(r.Context(), "idempotency:"+idempotencyKey, "processed", 24*time.Hour)
+	}
+
+	var req EventEmitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.Type == "" {
+		jsonutil.WriteErrorJSON(w, "Event type required")
+		return
+	}
+
+	topic := fmt.Sprintf("zone.%s.event.%s", zoneID, req.Type)
+	payload, _ := json.Marshal(req.Data)
+
+	// Publish to Redis Stream
+	err := h.rdb.XAdd(r.Context(), &redis.XAddArgs{
+		Stream: topic,
+		Values: map[string]interface{}{
+			"data": payload,
+			"ts":   time.Now().Unix(),
+		},
+	}).Err()
+
+	if err != nil {
+		h.logger.Error("Failed to publish to Redis Stream", "error", err)
+		jsonutil.WriteErrorJSON(w, "Failed to ingest event")
+		return
+	}
+
+	h.logger.Info("Event ingested", "topic", topic, "zone", zoneID)
+	jsonutil.WriteJSON(w, http.StatusAccepted, map[string]string{"status": "ingested", "topic": topic})
 }
 
 func (h *GatewayHandler) routePublic(w http.ResponseWriter, r *http.Request) {

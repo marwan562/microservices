@@ -42,6 +42,7 @@ type APIKey struct {
 	KeyHash        string     `json:"-"`
 	TruncatedKey   string     `json:"truncated_key"`
 	Environment    string     `json:"environment"`
+	Type           string     `json:"type"`             // 'secret' or 'publishable'
 	Scopes         string     `json:"scopes"`           // Space-separated scopes, "*" for all
 	RateLimitQuota int        `json:"rate_limit_quota"` // Per minute, overrides Org quota if > 0
 	CreatedAt      time.Time  `json:"created_at"`

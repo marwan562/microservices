@@ -45,6 +45,7 @@ func (s *AuthGRPCServer) ValidateKey(ctx context.Context, req *pb.ValidateKeyReq
 		Role:        role,
 		ZoneId:      key.ZoneID,
 		Mode:        key.Mode,
+		KeyType:     key.Type,
 	}, nil
 }
 

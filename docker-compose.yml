@@ -141,6 +141,7 @@ services:
       - DB_DSN=postgres://user:password@ledger_db:5432/ledger?sslmode=disable
       - MIGRATIONS_PATH=/app/migrations/ledger
       - REDIS_ADDR=redis:6379
+      - KAFKA_BROKERS=redpanda:29092
     ports:
       - "8083:8083"
     depends_on:

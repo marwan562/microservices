@@ -17,6 +17,7 @@ import (
 type GenerateAPIKeyRequest struct {
 	ZoneID      string `json:"zone_id"`
 	Environment string `json:"environment"` // "test" or "live"
+	Type        string `json:"type"`        // "secret" or "publishable"
 }
 
 type GenerateAPIKeyResponse struct {
@@ -24,6 +25,7 @@ type GenerateAPIKeyResponse struct {
 	Environment  string `json:"environment"`
 	ZoneID       string `json:"zone_id"`
 	Mode         string `json:"mode"`
+	Type         string `json:"type"`
 	TruncatedKey string `json:"truncated_key"`
 }
 
@@ -61,7 +63,16 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prefix := "sk_" + req.Environment
+	if req.Type == "" {
+		req.Type = "secret"
+	}
+
+	prefix := "sk_"
+	if req.Type == "publishable" {
+		prefix = "pk_"
+	}
+	prefix += req.Environment
+
 	fullKey, hash, err := apikey.GenerateKey(prefix, h.hmacSecret)
 	if err != nil {
 		jsonutil.WriteErrorJSON(w, "Failed to generate key")
@@ -79,6 +90,7 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 		KeyHash:      hash,
 		TruncatedKey: truncated,
 		Environment:  req.Environment,
+		Type:         req.Type,
 	}
 
 	if err := h.service.CreateAPIKey(r.Context(), key); err != nil {
@@ -93,6 +105,7 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 		Environment:  req.Environment,
 		ZoneID:       req.ZoneID,
 		Mode:         req.Environment,
+		Type:         req.Type,
 		TruncatedKey: truncated,
 	})
 }
@@ -109,6 +122,7 @@ type ValidateAPIKeyResponse struct {
 	Mode        string `json:"mode"`
 	Environment string `json:"environment"`
 	Scopes      string `json:"scopes"`
+	Type        string `json:"type"`
 }
 
 func (h *AuthHandler) ValidateAPIKey(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +152,46 @@ func (h *AuthHandler) ValidateAPIKey(w http.ResponseWriter, r *http.Request) {
 		Mode:        key.Mode,
 		Environment: key.Environment,
 		Scopes:      key.Scopes,
+		Type:        key.Type,
 	})
+}
+
+type CreateOrganizationRequest struct {
+	Name   string `json:"name"`
+	Domain string `json:"domain"`
+}
+
+func (h *AuthHandler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
+	userID, err := extractUserIDFromToken(r)
+	if err != nil || userID == "" {
+		jsonutil.WriteErrorJSON(w, "Unauthorized")
+		return
+	}
+
+	var req CreateOrganizationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		return
+	}
+
+	if req.Name == "" {
+		jsonutil.WriteErrorJSON(w, "Name is required")
+		return
+	}
+
+	org, err := h.service.CreateOrganization(r.Context(), req.Name, req.Domain)
+	if err != nil {
+		log.Printf("Failed to create organization: %v", err)
+		jsonutil.WriteErrorJSON(w, "Failed to create organization")
+		return
+	}
+
+	// Add creator as owner
+	if err := h.service.AddMember(r.Context(), userID, org.ID, domain.RoleOwner); err != nil {
+		log.Printf("Failed to add owner to organization: %v", err)
+	}
+
+	jsonutil.WriteJSON(w, http.StatusCreated, org)
 }
 
 // AuthHandler holds dependencies for authentication endpoints.

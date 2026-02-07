@@ -78,6 +78,7 @@ type ValidateKeyResponse struct {
 	RateLimitQuota int32                  `protobuf:"varint,7,opt,name=rate_limit_quota,json=rateLimitQuota,proto3" json:"rate_limit_quota,omitempty"`
 	ZoneId         string                 `protobuf:"bytes,8,opt,name=zone_id,json=zoneId,proto3" json:"zone_id,omitempty"`
 	Mode           string                 `protobuf:"bytes,9,opt,name=mode,proto3" json:"mode,omitempty"`
+	KeyType        string                 `protobuf:"bytes,10,opt,name=key_type,json=keyType,proto3" json:"key_type,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }

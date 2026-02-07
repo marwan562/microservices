@@ -87,6 +87,7 @@ message ValidateKeyResponse {
   int32 rate_limit_quota = 7;
   string zone_id = 8;
   string mode = 9;
+  string key_type = 10;
 }
 
 message ValidateTokenRequest {
