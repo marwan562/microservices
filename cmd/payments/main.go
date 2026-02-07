@@ -173,9 +173,9 @@ func main() {
 	})
 
 	// Register Handlers
-	// Gateway forwards /payments/* -> /*
-	// So /payments/payment_intents -> /payment_intents
-	mux.HandleFunc("/payment_intents", func(w http.ResponseWriter, r *http.Request) {
+	// Gateway forwards /v1/payments/* -> /*
+	// So /v1/payments/intents -> /intents
+	mux.HandleFunc("/intents", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handler.ListPaymentIntents(w, r)
 			return
@@ -184,8 +184,8 @@ func main() {
 	})
 
 	// For /confirm, we need to match the path prefix because of the ID parameter
-	// /payment_intents/{id}/confirm
-	mux.HandleFunc("/payment_intents/", func(w http.ResponseWriter, r *http.Request) {
+	// /intents/{id}/confirm
+	mux.HandleFunc("/intents/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		if r.Method == http.MethodPost && strings.HasSuffix(path, "/confirm") {
 			handler.IdempotencyMiddleware(handler.ConfirmPaymentIntent)(w, r)

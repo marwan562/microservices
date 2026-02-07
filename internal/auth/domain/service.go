@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type AuthService struct {
@@ -209,7 +211,7 @@ func (s *AuthService) CreatePasswordResetToken(ctx context.Context, userID strin
 	tokenHash := s.HashString(rawToken)
 
 	token := &PasswordResetToken{
-		ID:        fmt.Sprintf("prt_%d", time.Now().UnixNano()),
+		ID:        uuid.New().String(),
 		UserID:    userID,
 		Token:     tokenHash,
 		ExpiresAt: time.Now().Add(1 * time.Hour), // 1 hour expiry
@@ -264,7 +266,7 @@ func (s *AuthService) CreateEmailVerificationToken(ctx context.Context, userID s
 	tokenHash := s.HashString(rawToken)
 
 	token := &EmailVerificationToken{
-		ID:        fmt.Sprintf("evt_%d", time.Now().UnixNano()),
+		ID:        uuid.New().String(),
 		UserID:    userID,
 		Token:     tokenHash,
 		ExpiresAt: time.Now().Add(24 * time.Hour), // 24 hour expiry
