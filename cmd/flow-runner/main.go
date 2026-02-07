@@ -162,21 +162,56 @@ func processStreamMessage(ctx context.Context, stream string, msg redis.XMessage
 	zoneID := parts[1]
 	eventType := parts[3]
 
-	data, ok := msg.Values["data"].(string)
-	if !ok {
-		return
+	// Try to parse as full envelope first (new format)
+	var envelope struct {
+		ID             string                 `json:"id"`
+		Type           string                 `json:"type"`
+		ZoneID         string                 `json:"zone_id"`
+		OrgID          string                 `json:"org_id"`
+		Timestamp      string                 `json:"timestamp"`
+		IdempotencyKey string                 `json:"idempotency_key"`
+		Payload        map[string]interface{} `json:"payload"`
+		Meta           map[string]string      `json:"meta"`
 	}
 
 	var payload map[string]interface{}
-	json.Unmarshal([]byte(data), &payload)
+	var eventID string
 
-	event := map[string]interface{}{
-		"zone_id": zoneID,
-		"type":    eventType,
-		"data":    payload,
+	// Check for envelope (new format)
+	if envelopeStr, ok := msg.Values["envelope"].(string); ok {
+		if json.Unmarshal([]byte(envelopeStr), &envelope) == nil && envelope.ID != "" {
+			eventID = envelope.ID
+			eventType = envelope.Type
+			payload = envelope.Payload
+		}
 	}
 
-	log.Printf("Processing event from stream %s: type=%s", stream, eventType)
+	// Fallback to data field (legacy format)
+	if payload == nil {
+		if data, ok := msg.Values["data"].(string); ok {
+			json.Unmarshal([]byte(data), &payload)
+		}
+	}
+
+	if payload == nil {
+		payload = make(map[string]interface{})
+	}
+
+	if eventID == "" {
+		eventID = msg.ID
+	}
+
+	event := map[string]interface{}{
+		"event_id":        eventID,
+		"zone_id":         zoneID,
+		"type":            eventType,
+		"payload":         payload,
+		"idempotency_key": envelope.IdempotencyKey,
+		"org_id":          envelope.OrgID,
+		"timestamp":       envelope.Timestamp,
+	}
+
+	log.Printf("Processing event %s from stream %s: type=%s", eventID, stream, eventType)
 
 	// Find matching flows for this zone
 	flows, err := repo.ListFlows(ctx, zoneID)

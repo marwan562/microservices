@@ -10,11 +10,16 @@ import (
 type NodeType string
 
 const (
-	NodeTrigger   NodeType = "eventTrigger"
-	NodeCondition NodeType = "condition"
-	NodeWebhook   NodeType = "webhook"
-	NodeApproval  NodeType = "approval"
-	NodeAuditLog  NodeType = "auditLog"
+	NodeTrigger       NodeType = "eventTrigger"
+	NodeCondition     NodeType = "condition"
+	NodeWebhook       NodeType = "webhook"
+	NodeApproval      NodeType = "approval"
+	NodeAuditLog      NodeType = "auditLog"
+	NodeTransform     NodeType = "transform"
+	NodeDelay         NodeType = "delay"
+	NodeLoop          NodeType = "loop"
+	NodeSubflow       NodeType = "subflow"
+	NodeInternalEvent NodeType = "internalEvent"
 )
 
 type Flow struct {
