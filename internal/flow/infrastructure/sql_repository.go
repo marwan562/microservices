@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 
 	"github.com/sapliy/fintech-ecosystem/internal/flow/domain"
 )
@@ -197,6 +198,12 @@ func (r *SQLRepository) GetExecution(ctx context.Context, id string) (*domain.Fl
 }
 
 func (r *SQLRepository) ListExecutions(ctx context.Context, flowID string, limit, offset int) ([]*domain.FlowExecution, error) {
+	// Debug: check total count and flow-specific count
+	var totalCount, flowCount int
+	r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM flow_executions").Scan(&totalCount)
+	r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM flow_executions WHERE flow_id = $1", flowID).Scan(&flowCount)
+	log.Printf("ListExecutions DEBUG: total=%d, for_flow=%d, flowID=%s", totalCount, flowCount, flowID)
+
 	rows, err := r.db.QueryContext(ctx,
 		"SELECT id, flow_id, flow_version, trigger_id, status, current_node_id, input, output, steps, metadata, started_at, ended_at FROM flow_executions WHERE flow_id = $1 ORDER BY started_at DESC LIMIT $2 OFFSET $3",
 		flowID, limit, offset)
