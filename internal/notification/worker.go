@@ -146,6 +146,12 @@ func (w *WebhookWorker) ProcessWebhook(ctx context.Context, body []byte) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	// New standardized header (aligned with strategic documentation)
+	req.Header.Set("X-Sapliy-Signature", signature)
+	req.Header.Set("X-Sapliy-Event-ID", task.ID)
+	req.Header.Set("X-Sapliy-Event-Type", string(task.EventType))
+	req.Header.Set("X-Sapliy-Timestamp", time.Now().UTC().Format(time.RFC3339))
+	// Backward compatibility: deprecated headers (remove after 2026-05-14)
 	req.Header.Set("X-Webhook-Signature", signature)
 	req.Header.Set("X-Webhook-Event", string(task.EventType))
 	req.Header.Set("X-Webhook-ID", task.ID)

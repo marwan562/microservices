@@ -239,7 +239,7 @@ All webhooks include:
 POST /webhook HTTP/1.1
 X-Sapliy-Signature: sha256=abc123...
 X-Sapliy-Event-ID: evt_123
-X-Sapliy-Zone-ID: zone_456
+X-Sapliy-Event-Type: payment.completed
 X-Sapliy-Timestamp: 1706972400
 X-Sapliy-Signature-Version: 1
 ```

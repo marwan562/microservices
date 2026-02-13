@@ -46,9 +46,14 @@ func TestWebhookWorker_ProcessWebhook(t *testing.T) {
 					if r.Header.Get("Content-Type") != "application/json" {
 						return nil, fmt.Errorf("Expected Content-Type application/json")
 					}
-					signature := r.Header.Get("X-Webhook-Signature")
+					// Check new standardized header first
+					signature := r.Header.Get("X-Sapliy-Signature")
 					if signature == "" {
-						return nil, fmt.Errorf("Missing signature header")
+						// Fallback to deprecated header for backward compatibility
+						signature = r.Header.Get("X-Webhook-Signature")
+						if signature == "" {
+							return nil, fmt.Errorf("Missing signature header")
+						}
 					}
 
 					// Verify Signature
