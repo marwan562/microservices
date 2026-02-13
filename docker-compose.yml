@@ -107,6 +107,7 @@ services:
       - ENABLE_DEBUG_ENDPOINTS=true
     ports:
       - "8081:8081"
+      - "50051:50051"
     depends_on:
       - postgres
     networks:
@@ -145,6 +146,7 @@ services:
       - KAFKA_BROKERS=redpanda:29092
     ports:
       - "8083:8083"
+      - "50052:50052"
     depends_on:
       - ledger_db
     networks:
@@ -161,6 +163,7 @@ services:
       - LEDGER_GRPC_ADDR=ledger:50052
     ports:
       - "8085:8085"
+      - "50053:50053"
     depends_on:
       - ledger
     networks:
@@ -173,6 +176,8 @@ services:
       args:
         SERVICE_NAME: gateway
     container_name: microservices_gateway
+    # volume mount removed
+    # command override removed
     environment:
       - REDIS_ADDR=redis:6379
       - AUTH_SERVICE_URL=http://auth:8081

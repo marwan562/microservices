@@ -8,7 +8,10 @@ dist
 *.exe
 *.test
 *.out
+*.out
 .DS_Store
+gateway
+gateway-linux
 .next
 out
 .env
