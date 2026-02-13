@@ -221,7 +221,7 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Route to Service
 	// Handle /v1 prefix by optional stripping
 	p := path
-	if after, ok :=strings.CutPrefix(p, "/v1"); ok  {
+	if after, ok := strings.CutPrefix(p, "/v1"); ok {
 		p = after
 	}
 
@@ -464,6 +464,38 @@ func (h *GatewayHandler) routePublic(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// CORSMiddleware adds Cross-Origin Resource Sharing headers so the
+// Next.js frontend (and other allowed origins) can call the gateway.
+func CORSMiddleware(allowedOrigins string, next http.Handler) http.Handler {
+	origins := strings.Split(allowedOrigins, ",")
+	allowed := make(map[string]bool, len(origins))
+	for _, o := range origins {
+		allowed[strings.TrimSpace(o)] = true
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if allowed[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		} else if allowed["*"] {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, X-Zone-ID")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		// Handle preflight
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	logger := observability.NewLogger("gateway-service")
 
@@ -591,8 +623,16 @@ func main() {
 
 	gateway := NewGatewayHandler(authURL, paymentURL, ledgerURL, walletURL, billingURL, eventsURL, flowURL, notificationURL, rdb, authClient, walletClient, hmacSecret, logger)
 
-	// Wrap handler with OpenTelemetry and Prometheus
-	otelHandler := otelhttp.NewHandler(gateway, "gateway-request")
+	// CORS configuration
+	corsOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if corsOrigins == "" {
+		corsOrigins = "http://localhost:3000"
+		logger.Info("CORS_ALLOWED_ORIGINS not set, defaulting to localhost:3000")
+	}
+
+	// Wrap handler with CORS, OpenTelemetry and Prometheus
+	corsHandler := CORSMiddleware(corsOrigins, gateway)
+	otelHandler := otelhttp.NewHandler(corsHandler, "gateway-request")
 	promHandler := monitoring.PrometheusMiddleware(otelHandler)
 
 	server := &http.Server{
