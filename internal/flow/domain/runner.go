@@ -18,9 +18,10 @@ type NodeHandler interface {
 }
 
 type FlowRunner struct {
-	repo     Repository
-	handlers map[NodeType]NodeHandler
-	hooks    []ExecutionHook
+	repo           Repository
+	handlers       map[NodeType]NodeHandler
+	hooks          []ExecutionHook
+	approvalLedger *ApprovalLedgerService // Optional: for recording approval decisions
 }
 
 type ExecutionHook interface {
@@ -36,6 +37,10 @@ func NewFlowRunner(repo Repository) *FlowRunner {
 	}
 	r.registerDefaultHandlers()
 	return r
+}
+
+func (r *FlowRunner) SetApprovalLedger(ledger *ApprovalLedgerService) {
+	r.approvalLedger = ledger
 }
 
 func (r *FlowRunner) AddHook(hook ExecutionHook) {
@@ -176,16 +181,79 @@ func (r *FlowRunner) Resume(ctx context.Context, execID string, overrides map[st
 	if err != nil {
 		return err
 	}
+
 	if exec.Status != ExecutionPaused {
-		return fmt.Errorf("execution is not paused")
+		return fmt.Errorf("execution %s is not paused (status: %s)", execID, exec.Status)
+	}
+
+	// Validate approval metadata if this is an approval resume
+	if approvalData, ok := overrides["approvalData"].(map[string]interface{}); ok {
+		// Extract approval decision
+		approved, _ := approvalData["approved"].(bool)
+		approverUserID, _ := approvalData["approverUserId"].(string)
+		requiredRole, _ := approvalData["requiredRole"].(string)
+
+		log.Printf("Resuming execution %s with approval: approved=%v, approver=%s, requiredRole=%s",
+			execID, approved, approverUserID, requiredRole)
+
+		// Store approval decision in execution metadata
+		var metadata map[string]interface{}
+		if len(exec.Metadata) > 0 {
+			json.Unmarshal(exec.Metadata, &metadata)
+		}
+		if metadata == nil {
+			metadata = make(map[string]interface{})
+		}
+		metadata["approvalDecision"] = map[string]interface{}{
+			"approved":       approved,
+			"approverUserId": approverUserID,
+			"approvedAt":     time.Now().UTC().Format(time.RFC3339),
+			"requiredRole":   requiredRole,
+		}
+		exec.Metadata, _ = json.Marshal(metadata)
+
+		// Record approval decision in immutable ledger
+		if r.approvalLedger != nil {
+			flow, _ := r.repo.GetFlow(ctx, exec.FlowID)
+			ledgerEntry := ApprovalLedgerEntry{
+				ExecutionID:    execID,
+				NodeID:         exec.CurrentNodeID,
+				FlowID:         exec.FlowID,
+				ApproverUserID: approverUserID,
+				RequiredRole:   requiredRole,
+				Approved:       approved,
+				Timestamp:      time.Now().UTC(),
+			}
+
+			// Extract zone ID from flow or execution context
+			zoneID := ""
+			mode := "live"
+			if flow != nil {
+				zoneID = flow.ZoneID
+			}
+
+			if err := r.approvalLedger.RecordApprovalDecision(ctx, ledgerEntry, zoneID, mode); err != nil {
+				log.Printf("Warning: Failed to record approval in ledger: %v", err)
+				// Don't fail the execution if ledger recording fails
+				// The approval decision is still stored in execution metadata
+			}
+		}
+
+		// If not approved, mark execution as failed
+		if !approved {
+			exec.Status = ExecutionFailed
+			exec.EndedAt = time.Now()
+			if err := r.repo.UpdateExecution(ctx, exec); err != nil {
+				return err
+			}
+			return fmt.Errorf("execution rejected by approver")
+		}
 	}
 
 	flow, err := r.repo.GetFlow(ctx, exec.FlowID)
 	if err != nil {
 		return err
 	}
-
-	exec.Status = ExecutionRunning
 
 	var currentNode *Node
 	for _, n := range flow.Nodes {
@@ -196,21 +264,15 @@ func (r *FlowRunner) Resume(ctx context.Context, execID string, overrides map[st
 	}
 
 	if currentNode == nil {
-		return fmt.Errorf("current node %s not found in flow", exec.CurrentNodeID)
+		return fmt.Errorf("current node %s not found", exec.CurrentNodeID)
 	}
 
-	var lastOutput map[string]interface{}
-	if len(exec.Steps) > 0 {
-		json.Unmarshal(exec.Steps[len(exec.Steps)-1].Output, &lastOutput)
-	}
-	if lastOutput == nil {
-		lastOutput = make(map[string]interface{})
+	exec.Status = ExecutionRunning
+	if err := r.repo.UpdateExecution(ctx, exec); err != nil {
+		return err
 	}
 
-	for k, v := range overrides {
-		lastOutput[k] = v
-	}
-
+	// Continue from next nodes
 	var nextNodes []*Node
 	for _, edge := range flow.Edges {
 		if edge.Source == currentNode.ID {
@@ -222,10 +284,11 @@ func (r *FlowRunner) Resume(ctx context.Context, execID string, overrides map[st
 		}
 	}
 
-	log.Printf("Resuming execution %s from node %s", execID, currentNode.ID)
-
-	for _, next := range nextNodes {
-		if err := r.executeNode(ctx, flow, next, lastOutput, exec); err != nil {
+	for _, nextNode := range nextNodes {
+		if err := r.executeNode(ctx, flow, nextNode, overrides, exec); err != nil {
+			if err == ErrExecutionPaused {
+				return nil
+			}
 			return err
 		}
 	}
