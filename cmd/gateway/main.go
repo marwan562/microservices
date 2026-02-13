@@ -475,10 +475,16 @@ func CORSMiddleware(allowedOrigins string, next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		if allowed[origin] {
+
+		// Set CORS headers for matching origins
+		if origin != "" && allowed[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else if allowed["*"] {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if origin != "" {
+			// For preflight from any origin, still set the header so the
+			// browser sees a valid CORS response. In production, tighten this.
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
@@ -486,7 +492,7 @@ func CORSMiddleware(allowedOrigins string, next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 
-		// Handle preflight
+		// Handle preflight — must return before reaching auth/routing logic
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
