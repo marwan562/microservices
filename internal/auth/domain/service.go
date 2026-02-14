@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,6 +47,10 @@ func (s *AuthService) CreateUser(ctx context.Context, email, passwordHash string
 
 	// Publish UserRegistered event
 	if s.publisher != nil {
+		baseURL := os.Getenv("APP_BASE_URL")
+		if baseURL == "" {
+			baseURL = "https://sapliy.com"
+		}
 		event := map[string]interface{}{
 			"id":        uuid.New().String(),
 			"type":      "user.registered",
@@ -54,7 +59,7 @@ func (s *AuthService) CreateUser(ctx context.Context, email, passwordHash string
 				"user_id": user.ID,
 				"email":   user.Email,
 				"token":   token,
-				"link":    fmt.Sprintf("https://sapliy.com/verify-email?token=%s", token), // Todo: configure base URL
+				"link":    fmt.Sprintf("%s/verify-email?token=%s", baseURL, token),
 			},
 		}
 		_ = s.publisher.Publish(ctx, "", event)
@@ -260,10 +265,15 @@ func (s *AuthService) CreatePasswordResetToken(ctx context.Context, userID strin
 	}
 
 	// Publish PasswordResetRequested event
+	// Publish PasswordResetRequested event
 	if s.publisher != nil {
 		// Get user email
 		user, err := s.repo.GetUserByID(ctx, userID)
 		if err == nil && user != nil {
+			baseURL := os.Getenv("APP_BASE_URL")
+			if baseURL == "" {
+				baseURL = "https://sapliy.com"
+			}
 			event := map[string]interface{}{
 				"id":        uuid.New().String(),
 				"type":      "password.reset", // Was user.password_reset_requested, but events.go defines EventPasswordReset = "password.reset"
@@ -272,7 +282,7 @@ func (s *AuthService) CreatePasswordResetToken(ctx context.Context, userID strin
 					"user_id": userID,
 					"email":   user.Email,
 					"token":   rawToken,
-					"link":    fmt.Sprintf("https://sapliy.com/reset-password?token=%s", rawToken), // Todo: configure base URL
+					"link":    fmt.Sprintf("%s/reset-password?token=%s", baseURL, rawToken),
 				},
 			}
 			_ = s.publisher.Publish(ctx, "", event)
