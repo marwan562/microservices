@@ -277,7 +277,46 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	jsonutil.WriteJSON(w, http.StatusCreated, user)
+	// NEW: Issue tokens so user is logged in automatically
+	accessToken, err := jwtutil.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		log.Printf("Register: Failed to generate access token: %v", err)
+	} else {
+		// Generate Refresh Token
+		refreshToken, err := h.service.CreateRefreshToken(r.Context(), user.ID)
+		if err != nil {
+			log.Printf("Register: Failed to create refresh token: %v", err)
+		} else {
+			// Set Access Token Cookie
+			http.SetCookie(w, &http.Cookie{
+				Name:     "auth-token",
+				Value:    accessToken,
+				HttpOnly: true,
+				Secure:   true,
+				Path:     "/",
+				Expires:  time.Now().Add(15 * time.Minute),
+				SameSite: http.SameSiteLaxMode,
+			})
+
+			// Set Refresh Token Cookie
+			http.SetCookie(w, &http.Cookie{
+				Name:     "refreshtoken",
+				Value:    refreshToken,
+				HttpOnly: true,
+				Secure:   true,
+				Path:     "/",
+				Expires:  time.Now().Add(7 * 24 * time.Hour),
+				SameSite: http.SameSiteLaxMode,
+			})
+		}
+	}
+
+	// Return user and token in response
+	user.Password = ""
+	jsonutil.WriteJSON(w, http.StatusCreated, LoginResponse{
+		Token: accessToken,
+		User:  user,
+	})
 }
 
 // Login handles user authentication and JWT issuance.
