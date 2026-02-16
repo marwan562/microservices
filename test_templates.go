@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/sapliy/fintech-ecosystem/internal/zone"
 	"github.com/sapliy/fintech-ecosystem/internal/zone/domain"
@@ -135,7 +136,7 @@ func (m *MockRepo) ListByOrgID(ctx context.Context, orgID string) ([]*domain.Zon
 func (m *MockRepo) UpdateMetadata(ctx context.Context, id string, metadata map[string]string) error {
 	if zone, exists := m.zones[id]; exists {
 		zone.Metadata = metadata
-		zone.UpdatedAt = zone.UpdatedAt // In real implementation, this would be time.Now()
+		zone.UpdatedAt = time.Now()
 		return nil
 	}
 	return domain.ErrZoneNotFound

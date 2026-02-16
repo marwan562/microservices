@@ -281,6 +281,17 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *GatewayHandler) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	orgID := r.Header.Get("X-Org-ID")
+	if orgID == "" {
+		// If we are here, it might be that the request didn't go through the validation logic
+		// because of how ServeHTTP routes.
+		// However, ServeHTTP validates API key before calling this for "/events" and "/ws".
+		// But let's be safe.
+		h.logger.Warn("WebSocket attempt without Org ID context")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.logger.Error("WS upgrade failed", "error", err)
@@ -292,7 +303,11 @@ func (h *GatewayHandler) handleWebSocket(w http.ResponseWriter, r *http.Request)
 		}
 	}()
 
-	pubsub := h.rdb.Subscribe(r.Context(), "webhook_events")
+	// Subscribe to Org-scoped events
+	channel := fmt.Sprintf("events:org:%s", orgID)
+	h.logger.Info("Subscribing WS to channel", "channel", channel)
+
+	pubsub := h.rdb.Subscribe(r.Context(), channel)
 	defer func() {
 		if err := pubsub.Close(); err != nil {
 			h.logger.Warn("Failed to close Redis PubSub", "error", err)

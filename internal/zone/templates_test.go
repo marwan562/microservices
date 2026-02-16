@@ -12,7 +12,7 @@ func TestTemplateService_List(t *testing.T) {
 	// Setup
 	mockRepo := NewMockRepo()
 	providers := domain.TemplateProviders{}
-	service := NewService(mockRepo, providers)
+	service := NewService(mockRepo, providers, &MockEventPublisher{})
 	templateService := NewTemplateService(service)
 
 	// Test
@@ -51,7 +51,7 @@ func TestTemplateService_Get(t *testing.T) {
 	// Setup
 	mockRepo := NewMockRepo()
 	providers := domain.TemplateProviders{}
-	service := NewService(mockRepo, providers)
+	service := NewService(mockRepo, providers, &MockEventPublisher{})
 	templateService := NewTemplateService(service)
 
 	tests := []struct {
@@ -119,7 +119,7 @@ func TestTemplateService_Apply(t *testing.T) {
 	// Setup
 	mockRepo := NewMockRepo()
 	providers := domain.TemplateProviders{}
-	service := NewService(mockRepo, providers)
+	service := NewService(mockRepo, providers, &MockEventPublisher{})
 	templateService := NewTemplateService(service)
 
 	zoneID := "test-zone-123"
@@ -355,6 +355,12 @@ func (m *MockRepo) UpdateMetadata(ctx context.Context, id string, metadata map[s
 		return nil
 	}
 	return domain.ErrZoneNotFound
+}
+// MockEventPublisher implements domain.EventPublisher for testing
+type MockEventPublisher struct{}
+
+func (m *MockEventPublisher) PublishZoneCreated(ctx context.Context, event domain.ZoneCreatedEvent) error {
+	return nil
 }
 
 func (m *MockRepo) Delete(ctx context.Context, id string) error {
