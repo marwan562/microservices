@@ -7,6 +7,7 @@ import (
 
 	"github.com/sapliy/fintech-ecosystem/internal/zone"
 	"github.com/sapliy/fintech-ecosystem/internal/zone/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/apierror"
 	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
 )
 
@@ -27,7 +28,7 @@ func (h *ZoneHandler) CreateZone(w http.ResponseWriter, r *http.Request) {
 		TemplateName string `json:"template_name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
@@ -39,7 +40,7 @@ func (h *ZoneHandler) CreateZone(w http.ResponseWriter, r *http.Request) {
 		TemplateName: req.TemplateName,
 	})
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, fmt.Sprintf("Failed to create zone: %v", err))
+		apierror.Internal(fmt.Sprintf("Failed to create zone: %v", err)).Write(w)
 		return
 	}
 
@@ -50,7 +51,7 @@ func (h *ZoneHandler) GetZone(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	z, err := h.service.GetZone(r.Context(), id)
 	if err != nil || z == nil {
-		jsonutil.WriteErrorJSON(w, "Zone not found")
+		apierror.NotFound("Zone not found").Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, z)
@@ -58,22 +59,30 @@ func (h *ZoneHandler) GetZone(w http.ResponseWriter, r *http.Request) {
 
 func (h *ZoneHandler) BulkUpdateMetadata(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		ZoneIDs  []string               `json:"zone_ids"`
-		Metadata map[string]interface{} `json:"metadata"`
+		ZoneIDs  []string          `json:"zone_ids"`
+		Metadata map[string]string `json:"metadata"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
-	// Simplified logic for migration
-	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{"status": "partial_success"})
+
+	count, err := h.service.BulkUpdateMetadata(r.Context(), req.ZoneIDs, req.Metadata)
+	if err != nil {
+		apierror.Internal("Failed to update metadata").Write(w)
+		return
+	}
+
+	jsonutil.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"updated_count": count,
+	})
 }
 
 func (h *ZoneHandler) ListZones(w http.ResponseWriter, r *http.Request) {
 	orgID := r.URL.Query().Get("org_id")
 	zones, err := h.service.ListZones(r.Context(), orgID)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to list zones")
+		apierror.Internal("Failed to list zones").Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, zones)
@@ -83,7 +92,7 @@ func (h *ZoneHandler) GetTemplate(w http.ResponseWriter, r *http.Request) {
 	templateType := r.URL.Query().Get("type")
 	tmpl, err := h.templateService.Get(zone.TemplateType(templateType))
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Template not found")
+		apierror.NotFound("Template not found").Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, tmpl)
@@ -103,9 +112,10 @@ func (h *ZoneHandler) ApplyTemplate(w http.ResponseWriter, r *http.Request) {
 		jsonutil.WriteErrorJSON(w, "Invalid request body")
 		return
 	}
-	if _, err := h.templateService.Apply(r.Context(), req.ZoneID, zone.TemplateType(req.TemplateName)); err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+	result, err := h.templateService.Apply(r.Context(), req.ZoneID, zone.TemplateType(req.TemplateName))
+	if err != nil {
+		apierror.Internal(err.Error()).Write(w)
 		return
 	}
-	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{"message": "Template applied"})
+	jsonutil.WriteJSON(w, http.StatusOK, result)
 }

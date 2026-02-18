@@ -145,12 +145,7 @@ func main() {
 		jsonutil.WriteErrorJSON(w, "Not Found")
 	})
 
-	mux.HandleFunc("/bulk-transactions", func(w http.ResponseWriter, r *http.Request) {
-		// BulkRecordTransactions not yet migrated or keeps same name
-		// For now we'll assumes it's in the handler
-		// But wait, it wasn't in my RecordTransaction list.
-		// I'll check my api mapping.
-	})
+	mux.HandleFunc("/bulk-transactions", handler.BulkRecordTransactions)
 
 	port := ":8083"
 	logger.Info("Ledger service HTTP starting", "port", port)

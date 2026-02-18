@@ -50,12 +50,11 @@ func (h *LedgerHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LedgerHandler) GetAccount(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 2 {
-		apierror.BadRequest("Invalid URL").Write(w)
+	id := jsonutil.GetIDFromPath(r, "/v1/ledger/accounts/")
+	if id == "" {
+		apierror.BadRequest("Missing Account ID").Write(w)
 		return
 	}
-	id := parts[len(parts)-1]
 
 	acc, err := h.service.GetAccount(r.Context(), id)
 	if err != nil {
@@ -95,8 +94,7 @@ func (h *LedgerHandler) RecordTransaction(w http.ResponseWriter, r *http.Request
 }
 
 func (h *LedgerHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	id := parts[len(parts)-1]
+	id := jsonutil.GetIDFromPath(r, "/v1/ledger/transactions/")
 	tx, err := h.service.GetTransaction(r.Context(), id)
 	if err != nil || tx == nil {
 		apierror.NotFound("Transaction not found").Write(w)
@@ -106,13 +104,31 @@ func (h *LedgerHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LedgerHandler) BulkRecordTransactions(w http.ResponseWriter, r *http.Request) {
-	var req []domain.TransactionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var reqs []domain.TransactionRequest
+	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
 		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
-	// Simplified; original logic was more complex
-	jsonutil.WriteErrorJSON(w, "Bulk transactions not yet fully migrated")
+
+	zoneID := r.Header.Get("X-Zone-ID")
+	mode := r.Header.Get("X-Zone-Mode")
+
+	errs, err := h.service.BulkRecordTransactions(r.Context(), reqs, zoneID, mode)
+	if err != nil {
+		apierror.Internal("Internal server error: " + err.Error()).Write(w)
+		return
+	}
+
+	results := make([]map[string]string, len(errs))
+	for i, e := range errs {
+		if e != nil {
+			results[i] = map[string]string{"status": "error", "message": e.Error()}
+		} else {
+			results[i] = map[string]string{"status": "recorded"}
+		}
+	}
+
+	jsonutil.WriteJSON(w, http.StatusMultiStatus, results)
 }
 
 func (h *LedgerHandler) ListTransactions(w http.ResponseWriter, r *http.Request) {

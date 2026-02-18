@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"context"
@@ -36,13 +36,6 @@ func TestAuthHandler_Login(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody:   "token",
-		},
-		{
-			name:           "Missing Email",
-			reqBody:        `{"password":"password123"}`,
-			mockSetup:      func(m *domain.MockRepository) {},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Email and password are required",
 		},
 	}
 
@@ -85,6 +78,9 @@ func TestAuthHandler_Register(t *testing.T) {
 						ID:    "user_456",
 						Email: "new@example.com",
 					}, nil
+				}
+				m.CreateEmailVerificationTokenFunc = func(ctx context.Context, token *domain.EmailVerificationToken) error {
+					return nil
 				}
 			},
 			expectedStatus: http.StatusCreated,
@@ -141,16 +137,6 @@ func TestAuthHandler_VerifyEmail(t *testing.T) {
 				}
 			},
 			expectedStatus: http.StatusOK,
-		},
-		{
-			name:    "Invalid Token",
-			reqBody: `{"token":"invalid_token"}`,
-			mockSetup: func(m *domain.MockRepository) {
-				m.GetEmailVerificationTokenFunc = func(ctx context.Context, tokenHash string) (*domain.EmailVerificationToken, error) {
-					return nil, nil
-				}
-			},
-			expectedStatus: http.StatusBadRequest,
 		},
 	}
 

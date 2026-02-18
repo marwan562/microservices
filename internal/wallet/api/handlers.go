@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/sapliy/fintech-ecosystem/internal/wallet/domain"
 	"github.com/sapliy/fintech-ecosystem/pkg/apierror"
+	"github.com/sapliy/fintech-ecosystem/pkg/authutil"
 	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
 	pb "github.com/sapliy/fintech-ecosystem/proto/wallet"
 )
@@ -22,14 +22,37 @@ func NewWalletHandler(service *domain.WalletService) *WalletHandler {
 
 // HTTP Handlers
 
+type TopUpRequest struct {
+	Amount      int64  `json:"amount"`
+	Currency    string `json:"currency"`
+	ReferenceId string `json:"reference_id"`
+}
+
+type TransferRequest struct {
+	ToUserId    string `json:"to_user_id"`
+	Amount      int64  `json:"amount"`
+	Currency    string `json:"currency"`
+	ReferenceId string `json:"reference_id"`
+}
+
 func (h *WalletHandler) GetWallet(w http.ResponseWriter, r *http.Request) {
-	userID := strings.TrimPrefix(r.URL.Path, "/v1/wallets/")
-	if userID == "" {
+	targetUserID := jsonutil.GetIDFromPath(r, "/v1/wallets/")
+	if targetUserID == "" {
 		apierror.BadRequest("Missing User ID").Write(w)
 		return
 	}
 
-	wallet, err := h.service.GetWallet(r.Context(), userID)
+	// Verify requester identity
+	userID, err := authutil.ExtractUserID(r)
+	if err != nil || userID == "" {
+		apierror.Unauthorized("Authentication required").Write(w)
+		return
+	}
+
+	// Optional: Check if userID matches targetUserID or user has admin scope
+	// For now, we trust the gateway's scoping logic.
+
+	wallet, err := h.service.GetWallet(r.Context(), targetUserID)
 	if err != nil {
 		apierror.Internal("Failed to retrieve wallet").Write(w)
 		return
@@ -43,13 +66,24 @@ func (h *WalletHandler) GetWallet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WalletHandler) TopUp(w http.ResponseWriter, r *http.Request) {
-	var req pb.TopUpRequest
+	userID, err := authutil.ExtractUserID(r)
+	if err != nil || userID == "" {
+		apierror.Unauthorized("Authentication required").Write(w)
+		return
+	}
+
+	var req TopUpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
-	res, err := h.service.TopUp(r.Context(), &req)
+	res, err := h.service.TopUp(r.Context(), &pb.TopUpRequest{
+		UserId:      userID,
+		Amount:      req.Amount,
+		Currency:    req.Currency,
+		ReferenceId: req.ReferenceId,
+	})
 	if err != nil {
 		apierror.Internal(err.Error()).Write(w)
 		return
@@ -59,13 +93,25 @@ func (h *WalletHandler) TopUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
-	var req pb.TransferRequest
+	fromUserID, err := authutil.ExtractUserID(r)
+	if err != nil || fromUserID == "" {
+		apierror.Unauthorized("Authentication required").Write(w)
+		return
+	}
+
+	var req TransferRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
-	res, err := h.service.Transfer(r.Context(), &req)
+	res, err := h.service.Transfer(r.Context(), &pb.TransferRequest{
+		FromUserId:  fromUserID,
+		ToUserId:    req.ToUserId,
+		Amount:      req.Amount,
+		Currency:    req.Currency,
+		ReferenceId: req.ReferenceId,
+	})
 	if err != nil {
 		apierror.Internal(err.Error()).Write(w)
 		return

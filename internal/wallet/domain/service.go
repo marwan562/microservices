@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sapliy/fintech-ecosystem/pkg/validation"
 	pb "github.com/sapliy/fintech-ecosystem/proto/ledger"
 	walletpb "github.com/sapliy/fintech-ecosystem/proto/wallet"
 )
@@ -38,6 +39,14 @@ func (s *WalletService) GetWallet(ctx context.Context, userID string) (*walletpb
 }
 
 func (s *WalletService) TopUp(ctx context.Context, req *walletpb.TopUpRequest) (*walletpb.TransactionResponse, error) {
+	if err := validation.Validate(
+		validation.NotEmpty(req.UserId, "user_id"),
+		validation.PositiveAmount(req.Amount, "amount"),
+		validation.NotEmpty(req.Currency, "currency"),
+	); err != nil {
+		return nil, err
+	}
+
 	// Top up involves recording a transaction in the ledger
 	// From an internal "float" or "system" account to the user's liability account
 	res, err := s.ledgerClient.RecordTransaction(ctx, &pb.RecordTransactionRequest{
@@ -58,22 +67,19 @@ func (s *WalletService) TopUp(ctx context.Context, req *walletpb.TopUpRequest) (
 }
 
 func (s *WalletService) Transfer(ctx context.Context, req *walletpb.TransferRequest) (*walletpb.TransactionResponse, error) {
+	if err := validation.Validate(
+		validation.NotEmpty(req.FromUserId, "from_user_id"),
+		validation.NotEmpty(req.ToUserId, "to_user_id"),
+		validation.PositiveAmount(req.Amount, "amount"),
+		validation.NotEmpty(req.Currency, "currency"),
+	); err != nil {
+		return nil, err
+	}
+
 	// Transfer between two wallets
-	// This is a complex transaction in the ledger:
-	// Debit from_user, Credit to_user (or vice versa depending on direction)
-	// For simplicity, we'll implement this as two leg-transactions or a multi-leg transaction if ledger supports it.
-	// Our ledger RecordTransaction currently handles single account updates (which is simplified)
-	// but the domain model supports multiple entries.
-	// Actually, the LedgerService.RecordTransaction in internal/ledger/domain/service.go
-	// takes a TransactionRequest which has multiple entries.
-	// However, the gRPC LedgerService only has RecordTransaction with RecordTransactionRequest (one account).
-
-	// We need to either enhance the Ledger gRPC or do two calls (not atomic!).
-	// Let's assume we use the existing gRPC for now and acknowledge the race condition/atomicity issue.
-	// Better yet, I should have added a multi-reg gRPC.
-
-	// For now, let's just do a transfer by debiting one and crediting the other via the single-account RPC.
-	// THIS IS NOT RECOMMENDED FOR PRODUCTION - it should be atomic.
+	// FIXME: This implementation is NOT atomic. If the debit succeeds but the credit fails,
+	// money will be lost. This should use a multi-leg transaction supported by the ledger.
+	// For now, we perform two sequential updates.
 
 	// Debit from_user (amount is negative)
 	_, err := s.ledgerClient.RecordTransaction(ctx, &pb.RecordTransactionRequest{

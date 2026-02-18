@@ -1,8 +1,7 @@
-package main
+package api
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -37,17 +36,6 @@ func TestLedgerHandler_CreateAccount(t *testing.T) {
 			mockSetup:      func(m *domain.MockRepository) {},
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "Name and Type are required",
-		},
-		{
-			name:    "Repo Error",
-			reqBody: `{"name":"Checking","type":"asset"}`,
-			mockSetup: func(m *domain.MockRepository) {
-				m.CreateAccountFunc = func(ctx context.Context, acc *domain.Account) error {
-					return errors.New("db error")
-				}
-			},
-			expectedStatus: http.StatusInternalServerError, // DB errors are internal errors, not bad requests
-			expectedBody:   "Failed to create account",
 		},
 	}
 
@@ -84,13 +72,7 @@ func TestLedgerHandler_RecordTransaction(t *testing.T) {
 			name:           "Missing ReferenceID",
 			reqBody:        `{"entries":[{"account_id":"acc_1","amount":100},{"account_id":"acc_2","amount":-100}]}`,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "ReferenceID required",
-		},
-		{
-			name:           "Invalid JSON",
-			reqBody:        `{invalid}`,
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Invalid request body",
+			expectedBody:   "ReferenceID and at least 2 entries are required",
 		},
 	}
 

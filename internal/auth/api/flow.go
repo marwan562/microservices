@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/sapliy/fintech-ecosystem/internal/flow/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/apierror"
 	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
 )
 
@@ -20,11 +21,11 @@ func NewFlowHandler(repo domain.Repository, runner *domain.FlowRunner) *FlowHand
 func (h *FlowHandler) CreateFlow(w http.ResponseWriter, r *http.Request) {
 	var flow domain.Flow
 	if err := json.NewDecoder(r.Body).Decode(&flow); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 	if err := h.repo.CreateFlow(r.Context(), &flow); err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusCreated, flow)
@@ -34,7 +35,11 @@ func (h *FlowHandler) GetFlow(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	flow, err := h.repo.GetFlow(r.Context(), id)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
+		return
+	}
+	if flow == nil {
+		apierror.NotFound("Flow not found").Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, flow)
@@ -44,7 +49,7 @@ func (h *FlowHandler) ListFlows(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.URL.Query().Get("zone_id")
 	flows, err := h.repo.ListFlows(r.Context(), zoneID)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, flows)
@@ -52,11 +57,11 @@ func (h *FlowHandler) ListFlows(w http.ResponseWriter, r *http.Request) {
 func (h *FlowHandler) UpdateFlow(w http.ResponseWriter, r *http.Request) {
 	var flow domain.Flow
 	if err := json.NewDecoder(r.Body).Decode(&flow); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 	if err := h.repo.UpdateFlow(r.Context(), &flow); err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, flow)
@@ -66,7 +71,7 @@ func (h *FlowHandler) GetExecution(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	exec, err := h.repo.GetExecution(r.Context(), id)
 	if err != nil || exec == nil {
-		jsonutil.WriteErrorJSON(w, "Execution not found")
+		apierror.NotFound("Execution not found").Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, exec)
@@ -78,7 +83,7 @@ func (h *FlowHandler) ResumeExecution(w http.ResponseWriter, r *http.Request) {
 		Input       map[string]interface{} `json:"input"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 	// Simplified logic for migration
@@ -87,12 +92,18 @@ func (h *FlowHandler) ResumeExecution(w http.ResponseWriter, r *http.Request) {
 
 func (h *FlowHandler) BulkUpdateFlows(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		FlowIDs []string `json:"flow_ids"`
-		State   string   `json:"state"`
+		IDs     []string `json:"ids"`
+		Enabled bool     `json:"enabled"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
+
+	if err := h.repo.BulkUpdateFlowsEnabled(r.Context(), req.IDs, req.Enabled); err != nil {
+		apierror.Internal(err.Error()).Write(w)
+		return
+	}
+
 	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
