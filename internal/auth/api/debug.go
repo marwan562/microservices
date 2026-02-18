@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sapliy/fintech-ecosystem/internal/flow"
 	flowDomain "github.com/sapliy/fintech-ecosystem/internal/flow/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/apierror"
 	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
 )
 
@@ -29,14 +30,14 @@ func (h *DebugHandler) StartDebugSession(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	level := flowDomain.DebugLevel(req.Level)
 	session, err := h.debugService.StartDebugSession(context.Background(), req.FlowID, req.ZoneID, level)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
 		return
 	}
 
@@ -47,7 +48,11 @@ func (h *DebugHandler) GetDebugSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("session_id")
 	session, err := h.debugService.GetDebugSession(sessionID)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
+		return
+	}
+	if session == nil {
+		apierror.NotFound("Session not found").Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, session)
@@ -62,11 +67,11 @@ func (h *DebugHandler) WebSocketDebug(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		oneHourAgo := time.Now().Add(-1 * time.Hour)
+		oneHourAgo := time.Now().Add(-time.Hour)
 		newEvents, err := h.debugService.GetDebugEvents(sessionID, &oneHourAgo)
 		if err != nil {
 			continue
@@ -92,7 +97,7 @@ func (h *DebugHandler) GetDebugEvents(w http.ResponseWriter, r *http.Request) {
 
 	events, err := h.debugService.GetDebugEvents(sessionID, since)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
 		return
 	}
 
@@ -101,7 +106,7 @@ func (h *DebugHandler) GetDebugEvents(w http.ResponseWriter, r *http.Request) {
 func (h *DebugHandler) EndDebugSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("session_id")
 	if err := h.debugService.EndDebugSession(sessionID); err != nil {
-		jsonutil.WriteErrorJSON(w, err.Error())
+		apierror.Internal(err.Error()).Write(w)
 		return
 	}
 	jsonutil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ended"})
@@ -113,7 +118,7 @@ func (h *DebugHandler) ExecuteFlowWithDebug(w http.ResponseWriter, r *http.Reque
 		Input  map[string]interface{} `json:"input"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 	// Simplified for migration

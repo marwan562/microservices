@@ -109,7 +109,7 @@ func (h *ZoneHandler) ApplyTemplate(w http.ResponseWriter, r *http.Request) {
 		TemplateName string `json:"template_name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 	result, err := h.templateService.Apply(r.Context(), req.ZoneID, zone.TemplateType(req.TemplateName))

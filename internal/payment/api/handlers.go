@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
@@ -149,12 +148,11 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 	timer := prometheus.NewTimer(infrastructure.PaymentLatency.WithLabelValues("confirm"))
 	defer timer.ObserveDuration()
 
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 2 {
-		apierror.BadRequest("Invalid path").Write(w)
+	id := jsonutil.GetIDAfter(r, "intents")
+	if id == "" {
+		apierror.BadRequest("Missing Intent ID").Write(w)
 		return
 	}
-	id := pathParts[1] // Assuming /intents/{id}/confirm after stripping /v1/payments
 
 	var req struct {
 		PaymentMethodID string `json:"payment_method_id"`
@@ -171,12 +169,12 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 	}
 
 	if _, err := h.bankClient.Charge(r.Context(), intent.Amount, intent.Currency, req.PaymentMethodID); err != nil {
-		_ = h.service.UpdateStatus(r.Context(), id, "failed")
+		_ = h.service.UpdateStatus(r.Context(), id, "FAILED")
 		jsonutil.WriteJSON(w, http.StatusOK, map[string]string{"status": "failed", "reason": "Bank declined"})
 		return
 	}
 
-	if err := h.service.UpdateStatus(r.Context(), id, "succeeded"); err != nil {
+	if err := h.service.UpdateStatus(r.Context(), id, "SUCCEEDED"); err != nil {
 		apierror.Internal("Failed to update status").Write(w)
 		return
 	}
@@ -186,14 +184,14 @@ func (h *PaymentHandler) ConfirmPaymentIntent(w http.ResponseWriter, r *http.Req
 }
 
 func (h *PaymentHandler) RefundPaymentIntent(w http.ResponseWriter, r *http.Request) {
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 2 {
-		apierror.BadRequest("Invalid path").Write(w)
+	id := jsonutil.GetIDAfter(r, "intents")
+	if id == "" {
+		apierror.BadRequest("Missing Intent ID").Write(w)
 		return
 	}
-	id := pathParts[1]
 
-	if err := h.service.UpdateStatus(r.Context(), id, "refunded"); err != nil {
+	// For simplified logic, mapping refund to CANCELLED or a new REFUNDED if added to domain
+	if err := h.service.UpdateStatus(r.Context(), id, "CANCELLED"); err != nil {
 		apierror.Internal("Failed to update refund status").Write(w)
 		return
 	}
