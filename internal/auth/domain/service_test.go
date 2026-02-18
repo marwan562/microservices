@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestAuthService_CreateUser(t *testing.T) {
@@ -12,7 +13,6 @@ func TestAuthService_CreateUser(t *testing.T) {
 	email := "test@example.com"
 	passwordHash := "hashed-pwd"
 	userID := "user-123"
-	token := "verify-token"
 
 	repo := &MockRepository{
 		CreateUserFunc: func(ctx context.Context, e, p string) (*User, error) {
@@ -111,7 +111,8 @@ func TestAuthService_VerifyEmail(t *testing.T) {
 	repo := &MockRepository{
 		GetEmailVerificationTokenFunc: func(ctx context.Context, hash string) (*EmailVerificationToken, error) {
 			return &EmailVerificationToken{
-				UserID: userID,
+				UserID:    userID,
+				ExpiresAt: time.Now().Add(1 * time.Hour),
 			}, nil
 		},
 		SetEmailVerifiedFunc: func(ctx context.Context, id string) error {
@@ -130,5 +131,147 @@ func TestAuthService_VerifyEmail(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("VerifyEmail failed: %v", err)
+	}
+}
+
+func TestAuthService_VerifyEmail_Expired(t *testing.T) {
+	ctx := context.Background()
+	repo := &MockRepository{
+		GetEmailVerificationTokenFunc: func(ctx context.Context, hash string) (*EmailVerificationToken, error) {
+			return &EmailVerificationToken{
+				ExpiresAt: time.Now().Add(-1 * time.Hour), // Expired
+			}, nil
+		},
+	}
+	service := NewAuthService(repo, nil)
+	err := service.VerifyEmail(ctx, "token")
+	if err == nil || !strings.Contains(err.Error(), "expired") {
+		t.Errorf("expected expired error, got %v", err)
+	}
+}
+
+func TestAuthService_VerifyEmail_AlreadyUsed(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now()
+	repo := &MockRepository{
+		GetEmailVerificationTokenFunc: func(ctx context.Context, hash string) (*EmailVerificationToken, error) {
+			return &EmailVerificationToken{
+				ExpiresAt: time.Now().Add(1 * time.Hour),
+				UsedAt:    &now,
+			}, nil
+		},
+	}
+	service := NewAuthService(repo, nil)
+	err := service.VerifyEmail(ctx, "token")
+	if err == nil || !strings.Contains(err.Error(), "already used") {
+		t.Errorf("expected already used error, got %v", err)
+	}
+}
+
+func TestAuthService_HasPermission(t *testing.T) {
+	ctx := context.Background()
+	userID := "u1"
+	orgID := "o1"
+
+	tests := []struct {
+		name         string
+		userRole     string
+		requiredRole string
+		want         bool
+	}{
+		{"Owner can do anything", RoleOwner, RoleOwner, true},
+		{"Owner can do admin", RoleOwner, RoleAdmin, true},
+		{"Admin can do admin", RoleAdmin, RoleAdmin, true},
+		{"Admin can do member", RoleAdmin, RoleMember, true},
+		{"Member cannot do admin", RoleMember, RoleAdmin, false},
+		{"Guest/None cannot do anything", "none", RoleMember, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &MockRepository{
+				GetMembershipFunc: func(ctx context.Context, u, o string) (*Membership, error) {
+					return &Membership{Role: tt.userRole}, nil
+				},
+			}
+			service := NewAuthService(repo, nil)
+			got, err := service.HasPermission(ctx, userID, orgID, tt.requiredRole)
+			if err != nil {
+				t.Fatalf("HasPermission failed: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("HasPermission(%s, %s) = %v; want %v", tt.userRole, tt.requiredRole, got, tt.want)
+			}
+		})
+	}
+}
+func TestAuthService_ValidateOAuthToken_Expired(t *testing.T) {
+	ctx := context.Background()
+	repo := &MockRepository{
+		ValidateOAuthTokenFunc: func(ctx context.Context, token string) (*OAuthToken, error) {
+			return &OAuthToken{
+				AccessToken: token,
+				ExpiresAt:   time.Now().Add(-1 * time.Hour),
+			}, nil
+		},
+	}
+	service := NewAuthService(repo, nil)
+	_, err := service.ValidateOAuthToken(ctx, "expired-token")
+	if err == nil || !strings.Contains(err.Error(), "expired") {
+		t.Errorf("expected expired error, got %v", err)
+	}
+}
+
+func TestAuthService_ValidateRefreshToken_Revoked(t *testing.T) {
+	ctx := context.Background()
+	repo := &MockRepository{
+		GetRefreshTokenFunc: func(ctx context.Context, hash string) (*RefreshToken, error) {
+			return &RefreshToken{
+				Revoked:   true,
+				ExpiresAt: time.Now().Add(1 * time.Hour),
+			}, nil
+		},
+	}
+	service := NewAuthService(repo, nil)
+	_, err := service.ValidateRefreshToken(ctx, "token")
+	if err == nil || !strings.Contains(err.Error(), "revoked") {
+		t.Errorf("expected revoked error, got %v", err)
+	}
+}
+
+func TestAuthService_ValidateRefreshToken_Expired(t *testing.T) {
+	ctx := context.Background()
+	repo := &MockRepository{
+		GetRefreshTokenFunc: func(ctx context.Context, hash string) (*RefreshToken, error) {
+			return &RefreshToken{
+				Revoked:   false,
+				ExpiresAt: time.Now().Add(-1 * time.Hour),
+			}, nil
+		},
+	}
+	service := NewAuthService(repo, nil)
+	_, err := service.ValidateRefreshToken(ctx, "token")
+	if err == nil || !strings.Contains(err.Error(), "expired") {
+		t.Errorf("expected expired error, got %v", err)
+	}
+}
+
+func TestAuthService_CreateUser_VerificationTokenFail(t *testing.T) {
+	ctx := context.Background()
+	repo := &MockRepository{
+		CreateUserFunc: func(ctx context.Context, email, pwd string) (*User, error) {
+			return &User{ID: "u1", Email: email}, nil
+		},
+		CreateEmailVerificationTokenFunc: func(ctx context.Context, token *EmailVerificationToken) error {
+			return errors.New("db error")
+		},
+	}
+	service := NewAuthService(repo, nil)
+	user, err := service.CreateUser(ctx, "test@example.com", "long-password")
+	if err != nil {
+		t.Fatalf("CreateUser should not fail if verification token fails currently: %v", err)
+	}
+	if user == nil {
+		t.Error("expected user to be returned even if token fails")
 	}
 }

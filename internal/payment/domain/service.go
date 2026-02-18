@@ -2,6 +2,8 @@ package domain
 
 import (
 	"context"
+
+	"github.com/sapliy/fintech-ecosystem/pkg/validation"
 )
 
 type PaymentService struct {
@@ -13,6 +15,13 @@ func NewPaymentService(repo Repository) *PaymentService {
 }
 
 func (s *PaymentService) CreatePaymentIntent(ctx context.Context, intent *PaymentIntent) error {
+	if err := validation.Validate(
+		validation.PositiveAmount(intent.Amount, "amount"),
+		validation.NotEmpty(intent.Currency, "currency"),
+		validation.NotEmpty(intent.ZoneID, "zone_id"),
+	); err != nil {
+		return err
+	}
 	return s.repo.CreatePaymentIntent(ctx, intent)
 }
 
@@ -21,6 +30,12 @@ func (s *PaymentService) GetPaymentIntent(ctx context.Context, id string) (*Paym
 }
 
 func (s *PaymentService) UpdateStatus(ctx context.Context, id, status string) error {
+	if err := validation.Validate(
+		validation.NotEmpty(id, "id"),
+		validation.InList(status, []string{"CREATED", "PROCESSING", "SUCCEEDED", "FAILED", "CANCELLED"}, "status"),
+	); err != nil {
+		return err
+	}
 	return s.repo.UpdateStatus(ctx, id, status)
 }
 

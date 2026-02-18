@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sapliy/fintech-ecosystem/pkg/validation"
 )
 
 type Publisher interface {
@@ -32,6 +33,13 @@ func NewAuthService(repo Repository, publisher Publisher) *AuthService {
 // User methods
 
 func (s *AuthService) CreateUser(ctx context.Context, email, passwordHash string) (*User, error) {
+	if err := validation.Validate(
+		validation.Email(email),
+		validation.MinLength(passwordHash, 8, "password"),
+	); err != nil {
+		return nil, err
+	}
+
 	user, err := s.repo.CreateUser(ctx, email, passwordHash)
 	if err != nil {
 		return nil, err

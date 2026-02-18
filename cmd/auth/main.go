@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/sapliy/fintech-ecosystem/internal/auth/api"
 	"github.com/sapliy/fintech-ecosystem/internal/auth/domain"
 	"github.com/sapliy/fintech-ecosystem/internal/auth/infrastructure"
 	"github.com/sapliy/fintech-ecosystem/internal/flow"
@@ -148,8 +149,8 @@ func main() {
 	zoneService := zone.NewService(zoneRepo, providers, zonePublisher)
 	templateService := zone.NewTemplateService(zoneService)
 
-	handler := &AuthHandler{service: authService, hmacSecret: hmacSecret, rdb: rdb}
-	zoneHandler := &ZoneHandler{service: zoneService, templateService: templateService}
+	handler := api.NewAuthHandler(authService, hmacSecret, rdb)
+	zoneHandler := api.NewZoneHandler(zoneService, templateService)
 
 	// Initialize Tracer
 	shutdown, err := observability.InitTracer(context.Background(), observability.Config{
@@ -230,8 +231,8 @@ func main() {
 
 	flowRunner := flowDomain.NewFlowRunner(flowRepo)
 	debugService := flow.NewDebugService(flowRepo)
-	flowHandler := &FlowHandler{repo: flowRepo, runner: flowRunner}
-	debugHandler := NewDebugHandler(debugService)
+	flowHandler := api.NewFlowHandler(flowRepo, flowRunner)
+	debugHandler := api.NewDebugHandler(debugService)
 
 	// ... rest of main ...
 	mux.HandleFunc("/flows", func(w http.ResponseWriter, r *http.Request) {
@@ -346,7 +347,7 @@ func main() {
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(monitoring.UnaryServerInterceptor("auth")),
 	)
-	pb.RegisterAuthServiceServer(s, NewAuthGRPCServer(authService))
+	pb.RegisterAuthServiceServer(s, api.NewAuthGRPCServer(authService))
 
 	logger.Info("Auth service gRPC starting", "port", ":50051")
 

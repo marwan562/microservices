@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/sapliy/fintech-ecosystem/internal/payment/api"
 	"github.com/sapliy/fintech-ecosystem/internal/payment/domain"
 	"github.com/sapliy/fintech-ecosystem/internal/payment/infrastructure"
 	"github.com/sapliy/fintech-ecosystem/pkg/bank"
@@ -148,14 +149,14 @@ func main() {
 	// Start Metrics Server
 	monitoring.StartMetricsServer(":8086") // Distinct from HTTP server on 8082 if preferred, but on separate port is standard
 
-	handler := &PaymentHandler{
-		service:       service,
-		bankClient:    bankClient,
-		rdb:           rdb,
-		ledgerClient:  ledgerClient,
-		kafkaProducer: kafkaProducer,
-		rabbitClient:  rabbitClient,
-	}
+	handler := api.NewPaymentHandler(
+		service,
+		bankClient,
+		rdb,
+		ledgerClient,
+		kafkaProducer,
+		rabbitClient,
+	)
 
 	mux := http.NewServeMux()
 

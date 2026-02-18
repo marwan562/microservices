@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -88,20 +89,35 @@ func validKeyResponse() *pb.ValidateKeyResponse {
 	}
 }
 
-// newTestGateway creates a GatewayHandler backed by miniredis and mock gRPC clients.
-func newTestGateway(t *testing.T, authClient pb.AuthServiceClient) (*GatewayHandler, *miniredis.Miniredis) {
+// newTestGateway creates a GatewayHandler wrapped in middlewares.
+func newTestGateway(t *testing.T, authClient pb.AuthServiceClient) (http.Handler, *GatewayHandler, *miniredis.Miniredis) {
 	t.Helper()
 	mr := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	logger := observability.NewLogger("gateway-test")
+
 	allowedOrigins := map[string]bool{"http://localhost:3000": true}
-	h := NewGatewayHandler(
-		"http://auth", "http://payment", "http://ledger",
-		"http://wallet", "http://billing", "http://events",
-		"http://flow", "http://notification",
-		rdb, authClient, &mockWalletClient{}, testHMACSecret, logger, allowedOrigins,
-	)
-	return h, mr
+	cfg := &Config{
+		AuthServiceURL:         "http://auth",
+		PaymentServiceURL:      "http://payment",
+		LedgerServiceURL:       "http://ledger",
+		WalletServiceURL:       "http://wallet",
+		BillingServiceURL:      "http://billing",
+		EventsServiceURL:       "http://events",
+		FlowServiceURL:         "http://flow",
+		NotificationServiceURL: "http://notification",
+		HMACSecret:             testHMACSecret,
+		AllowedOrigins:         allowedOrigins,
+		CORSOrigins:            "http://localhost:3000",
+	}
+
+	h := NewGatewayHandler(cfg, rdb, authClient, &mockWalletClient{}, logger)
+
+	// Wrap with middlewares similar to main.go
+	handler := CORSMiddleware(cfg.CORSOrigins, cfg.AllowedOrigins)(h)
+	handler = h.AuthMiddleware(handler)
+
+	return handler, h, mr
 }
 
 // apiErrorCode unmarshals the "code" field from an apierror JSON response.
@@ -121,11 +137,12 @@ func apiErrorCode(t *testing.T, body string) string {
 // ─── Tests: API Key Validation ────────────────────────────────────────────────
 
 func TestServeHTTP_MissingAPIKey(t *testing.T) {
-	h, _ := newTestGateway(t, &mockAuthClient{
+	handler, h, _ := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			return &pb.ValidateKeyResponse{Valid: false}, nil
 		},
 	})
+	_ = h
 
 	tests := []struct {
 		name        string
@@ -160,7 +177,7 @@ func TestServeHTTP_MissingAPIKey(t *testing.T) {
 				req.Header.Set("Authorization", tt.authHeader)
 			}
 			w := httptest.NewRecorder()
-			h.ServeHTTP(w, req)
+			handler.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
 				t.Errorf("status: got %d, want %d", w.Code, tt.wantStatus)
@@ -173,16 +190,17 @@ func TestServeHTTP_MissingAPIKey(t *testing.T) {
 }
 
 func TestServeHTTP_InvalidAPIKey(t *testing.T) {
-	h, _ := newTestGateway(t, &mockAuthClient{
+	handler, h, _ := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			return &pb.ValidateKeyResponse{Valid: false}, nil
 		},
 	})
+	_ = h
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/payments", nil)
 	req.Header.Set("Authorization", "Bearer sk_invalid_key_that_fails_validation")
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
+	handler.ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("status: got %d, want %d", w.Code, http.StatusUnauthorized)
@@ -197,7 +215,7 @@ func TestServeHTTP_InvalidAPIKey(t *testing.T) {
 func TestServeHTTP_PublicRoutes(t *testing.T) {
 	// Public routes should never call the auth gRPC client.
 	authCalled := false
-	h, _ := newTestGateway(t, &mockAuthClient{
+	handler, h, _ := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			authCalled = true
 			return &pb.ValidateKeyResponse{Valid: false}, nil
@@ -219,7 +237,7 @@ func TestServeHTTP_PublicRoutes(t *testing.T) {
 			authCalled = false
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 			w := httptest.NewRecorder()
-			h.ServeHTTP(w, req)
+			handler.ServeHTTP(w, req)
 
 			if authCalled {
 				t.Errorf("auth gRPC client should not be called for public path %s", path)
@@ -236,7 +254,7 @@ func TestServeHTTP_PublicRoutes(t *testing.T) {
 
 func TestServeHTTP_ScopeEnforcement(t *testing.T) {
 	// Auth returns a key with only ledger:read scope.
-	h, _ := newTestGateway(t, &mockAuthClient{
+	handler, h, _ := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			resp := validKeyResponse()
 			resp.Scopes = "ledger:read" // no payments scope
@@ -256,7 +274,7 @@ func TestServeHTTP_ScopeEnforcement(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/payments", nil)
 	req.Header.Set("Authorization", "Bearer "+apiKeyStr)
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
+	handler.ServeHTTP(w, req)
 
 	if w.Code != http.StatusForbidden {
 		t.Errorf("status: got %d, want %d (scope enforcement)", w.Code, http.StatusForbidden)
@@ -272,20 +290,21 @@ func TestServeHTTP_ScopeEnforcement(t *testing.T) {
 // ─── Tests: Publishable Key Restriction ──────────────────────────────────────
 
 func TestServeHTTP_PublishableKeyRestriction(t *testing.T) {
-	h, _ := newTestGateway(t, &mockAuthClient{
+	handler, h, _ := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			resp := validKeyResponse()
 			resp.KeyType = "publishable"
 			return resp, nil
 		},
 	})
+	_ = h
 
 	apiKeyStr, _, _ := apikey.GenerateKey("pk", testHMACSecret)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/payments", nil)
 	req.Header.Set("Authorization", "Bearer "+apiKeyStr)
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
+	handler.ServeHTTP(w, req)
 
 	if w.Code != http.StatusForbidden {
 		t.Errorf("status: got %d, want %d", w.Code, http.StatusForbidden)
@@ -300,7 +319,7 @@ func TestServeHTTP_PublishableKeyRestriction(t *testing.T) {
 func TestServeHTTP_RateLimiting(t *testing.T) {
 	const quota = int32(3)
 
-	h, mr := newTestGateway(t, &mockAuthClient{
+	handler, h, mr := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			resp := validKeyResponse()
 			resp.RateLimitQuota = quota
@@ -322,7 +341,7 @@ func TestServeHTTP_RateLimiting(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/v1/payments", nil)
 		req.Header.Set("Authorization", "Bearer "+apiKeyStr)
 		w := httptest.NewRecorder()
-		h.ServeHTTP(w, req)
+		handler.ServeHTTP(w, req)
 		return w.Code
 	}
 
@@ -340,7 +359,7 @@ func TestServeHTTP_RateLimiting(t *testing.T) {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/payments", nil)
 	req.Header.Set("Authorization", "Bearer "+apiKeyStr)
-	h.ServeHTTP(w, req)
+	handler.ServeHTTP(w, req)
 	if w.Header().Get("Retry-After") == "" {
 		t.Error("rate-limited response should include Retry-After header")
 	}
@@ -390,7 +409,7 @@ func TestHandleEventEmit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h, _ := newTestGateway(t, &mockAuthClient{
+			_, h, _ := newTestGateway(t, &mockAuthClient{
 				ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 					return validKeyResponse(), nil
 				},
@@ -418,7 +437,7 @@ func TestHandleEventEmit(t *testing.T) {
 }
 
 func TestHandleEventEmit_Idempotency(t *testing.T) {
-	h, _ := newTestGateway(t, &mockAuthClient{
+	_, h, _ := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			return validKeyResponse(), nil
 		},
@@ -532,7 +551,11 @@ func TestCORSMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := CORSMiddleware(tt.allowedOrigins, next)
+			allowedOriginsMap := make(map[string]bool)
+			for _, o := range strings.Split(tt.allowedOrigins, ",") {
+				allowedOriginsMap[strings.TrimSpace(o)] = true
+			}
+			handler := CORSMiddleware(tt.allowedOrigins, allowedOriginsMap)(next)
 			req := httptest.NewRequest(tt.method, "/v1/test", nil)
 			if tt.requestOrigin != "" {
 				req.Header.Set("Origin", tt.requestOrigin)
@@ -554,18 +577,19 @@ func TestCORSMiddleware(t *testing.T) {
 // ─── Tests: Route Not Found ───────────────────────────────────────────────────
 
 func TestServeHTTP_RouteNotFound(t *testing.T) {
-	h, _ := newTestGateway(t, &mockAuthClient{
+	handler, h, _ := newTestGateway(t, &mockAuthClient{
 		ValidateKeyFunc: func(_ context.Context, _ *pb.ValidateKeyRequest, _ ...grpc.CallOption) (*pb.ValidateKeyResponse, error) {
 			return validKeyResponse(), nil
 		},
 	})
+	_ = h
 
 	apiKeyStr, _, _ := apikey.GenerateKey("sk", testHMACSecret)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/nonexistent-route", nil)
 	req.Header.Set("Authorization", "Bearer "+apiKeyStr)
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
+	handler.ServeHTTP(w, req)
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("status: got %d, want %d", w.Code, http.StatusNotFound)
@@ -591,5 +615,29 @@ func TestAPIKeyHashKey(t *testing.T) {
 	h3 := apikey.HashKey("sk_other_key", "secret")
 	if h1 == h3 {
 		t.Error("HashKey collision: different keys produced same hash")
+	}
+}
+
+func TestLoadConfig(t *testing.T) {
+	logger := observability.NewLogger("test")
+
+	// Set some env vars
+	os.Setenv("AUTH_SERVICE_URL", "http://auth:8081")
+	os.Setenv("API_KEY_HMAC_SECRET", "super-secret")
+	os.Setenv("GO_ENV", "production")
+	defer os.Unsetenv("AUTH_SERVICE_URL")
+	defer os.Unsetenv("API_KEY_HMAC_SECRET")
+	defer os.Unsetenv("GO_ENV")
+
+	cfg := LoadConfig(logger)
+
+	if cfg.AuthServiceURL != "http://auth:8081" {
+		t.Errorf("expected auth URL http://auth:8081, got %s", cfg.AuthServiceURL)
+	}
+	if cfg.HMACSecret != "super-secret" {
+		t.Errorf("expected secret super-secret, got %s", cfg.HMACSecret)
+	}
+	if cfg.Environment != "production" {
+		t.Errorf("expected env production, got %s", cfg.Environment)
 	}
 }
