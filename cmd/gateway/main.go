@@ -9,7 +9,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/sapliy/fintech-ecosystem/pkg/apikey"
@@ -56,7 +58,7 @@ type GatewayHandler struct {
 }
 
 // NewGatewayHandler creates a new instance of GatewayHandler.
-func NewGatewayHandler(auth, payment, ledger, wallet, billing, events, flow, notification string, rdb *redis.Client, authClient pb.AuthServiceClient, walletClient walletpb.WalletServiceClient, hmacSecret string, logger *observability.Logger) *GatewayHandler {
+func NewGatewayHandler(auth, payment, ledger, wallet, billing, events, flow, notification string, rdb *redis.Client, authClient pb.AuthServiceClient, walletClient walletpb.WalletServiceClient, hmacSecret string, logger *observability.Logger, allowedOrigins map[string]bool) *GatewayHandler {
 	return &GatewayHandler{
 		authServiceURL:         auth,
 		paymentServiceURL:      payment,
@@ -68,7 +70,13 @@ func NewGatewayHandler(auth, payment, ledger, wallet, billing, events, flow, not
 		notificationServiceURL: notification,
 		rdb:                    rdb,
 		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool { return true },
+			CheckOrigin: func(r *http.Request) bool {
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					return true // Same-origin requests have no Origin header
+				}
+				return allowedOrigins[origin] || allowedOrigins["*"]
+			},
 		},
 		authClient:   authClient,
 		walletClient: walletClient,
@@ -491,15 +499,19 @@ func CORSMiddleware(allowedOrigins string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		// Set CORS headers for matching origins
+		// Set CORS headers only for explicitly allowed origins
 		if origin != "" && allowed[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else if allowed["*"] {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-		} else if origin != "" {
-			// For preflight from any origin, still set the header so the
-			// browser sees a valid CORS response. In production, tighten this.
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			// Origin not in allowlist — do not set any CORS headers.
+			// The browser will block the cross-origin request.
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			// For non-preflight: proceed without CORS headers (browser blocks response)
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
@@ -563,10 +575,7 @@ func main() {
 
 	billingURL := os.Getenv("BILLING_SERVICE_URL")
 	if billingURL == "" {
-		billingURL = "http://127.0.0.1:8089" // Assuming a port for billing REST if added, or proxying gRPC?
-		// Note: Billing seems gRPC only currently, but Gateway proxies HTTP.
-		// For now, I'll point it to where billing might listen or keep it for future REST expansion.
-		// If Billing has no REST handlers, this will 404/502 which is expected for now.
+		billingURL = "http://127.0.0.1:8090"
 	}
 
 	rdb := redis.NewClient(&redis.Options{
@@ -635,14 +644,17 @@ func main() {
 	// Start Metrics Server
 	monitoring.StartMetricsServer(":8087")
 
-	// HMAC Secret
+	// HMAC Secret — fail-fast in production
 	hmacSecret := os.Getenv("API_KEY_HMAC_SECRET")
+	goEnv := os.Getenv("GO_ENV")
 	if hmacSecret == "" {
+		if goEnv == "production" {
+			logger.Error("FATAL: API_KEY_HMAC_SECRET must be set in production")
+			os.Exit(1)
+		}
 		hmacSecret = "local-dev-secret-do-not-use-in-prod"
 		logger.Warn("API_KEY_HMAC_SECRET not set, using default for dev")
 	}
-
-	gateway := NewGatewayHandler(authURL, paymentURL, ledgerURL, walletURL, billingURL, eventsURL, flowURL, notificationURL, rdb, authClient, walletClient, hmacSecret, logger)
 
 	// CORS configuration
 	corsOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
@@ -651,19 +663,50 @@ func main() {
 		logger.Info("CORS_ALLOWED_ORIGINS not set, defaulting to localhost:3000")
 	}
 
+	// Build allowed origins map (shared between CORS middleware and WebSocket upgrader)
+	originsList := strings.Split(corsOrigins, ",")
+	allowedOrigins := make(map[string]bool, len(originsList))
+	for _, o := range originsList {
+		allowedOrigins[strings.TrimSpace(o)] = true
+	}
+
+	gateway := NewGatewayHandler(authURL, paymentURL, ledgerURL, walletURL, billingURL, eventsURL, flowURL, notificationURL, rdb, authClient, walletClient, hmacSecret, logger, allowedOrigins)
+
 	// Wrap handler with CORS, OpenTelemetry and Prometheus
 	corsHandler := CORSMiddleware(corsOrigins, gateway)
 	otelHandler := otelhttp.NewHandler(corsHandler, "gateway-request")
 	promHandler := monitoring.PrometheusMiddleware(otelHandler)
 
 	server := &http.Server{
-		Addr:    ":8080",
-		Handler: promHandler,
+		Addr:              ":8080",
+		Handler:           promHandler,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	logger.Info("Gateway service starting", "port", ":8080")
-	if err := server.ListenAndServe(); err != nil {
-		logger.Error("Gateway server failed", "error", err)
+
+	// Graceful shutdown: listen for SIGINT/SIGTERM
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("Gateway server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-quit
+	logger.Info("Shutdown signal received, draining connections...", "signal", sig.String())
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("Gateway forced to shutdown", "error", err)
 		os.Exit(1)
 	}
+	logger.Info("Gateway shutdown complete")
 }
