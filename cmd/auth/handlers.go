@@ -9,6 +9,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sapliy/fintech-ecosystem/internal/auth/domain"
+	"github.com/sapliy/fintech-ecosystem/pkg/apierror"
 	"github.com/sapliy/fintech-ecosystem/pkg/apikey"
 	"github.com/sapliy/fintech-ecosystem/pkg/bcryptutil"
 	"github.com/sapliy/fintech-ecosystem/pkg/jsonutil"
@@ -60,19 +61,19 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 	userID, err := extractUserIDFromToken(r)
 	if err != nil || userID == "" {
 		log.Printf("GenerateAPIKey: Validation failed. userID: %s, err: %v", userID, err)
-		jsonutil.WriteErrorJSON(w, "Unauthorized")
+		apierror.Unauthorized("Unauthorized").Write(w)
 		return
 	}
 	log.Printf("GenerateAPIKey: Success for user %s", userID)
 
 	var req GenerateAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.ZoneID == "" {
-		jsonutil.WriteErrorJSON(w, "zone_id is required")
+		apierror.BadRequest("zone_id is required").Write(w)
 		return
 	}
 
@@ -88,7 +89,7 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	fullKey, hash, err := apikey.GenerateKey(prefix, h.hmacSecret)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to generate key")
+		apierror.Internal("Failed to generate key").Write(w)
 		return
 	}
 
@@ -108,7 +109,7 @@ func (h *AuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.CreateAPIKey(r.Context(), key); err != nil {
 		log.Printf("Failed to save API key: %v", err)
-		jsonutil.WriteErrorJSON(w, "Failed to save API key (verify zone_id)")
+		apierror.Internal("Failed to save API key (verify zone_id)").Write(w)
 		return
 	}
 
@@ -141,14 +142,14 @@ type ValidateAPIKeyResponse struct {
 func (h *AuthHandler) ValidateAPIKey(w http.ResponseWriter, r *http.Request) {
 	var req ValidateAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	key, err := h.service.GetAPIKeyByHash(r.Context(), req.KeyHash)
 	if err != nil {
 		log.Printf("Error validating key: %v", err)
-		jsonutil.WriteErrorJSON(w, "Validation failed")
+		apierror.Internal("Validation failed").Write(w)
 		return
 	}
 
@@ -177,25 +178,25 @@ type CreateOrganizationRequest struct {
 func (h *AuthHandler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 	userID, err := extractUserIDFromToken(r)
 	if err != nil || userID == "" {
-		jsonutil.WriteErrorJSON(w, "Unauthorized")
+		apierror.Unauthorized("Unauthorized").Write(w)
 		return
 	}
 
 	var req CreateOrganizationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Name == "" {
-		jsonutil.WriteErrorJSON(w, "Name is required")
+		apierror.BadRequest("Name is required").Write(w)
 		return
 	}
 
 	org, err := h.service.CreateOrganization(r.Context(), req.Name, req.Domain)
 	if err != nil {
 		log.Printf("Failed to create organization: %v", err)
-		jsonutil.WriteErrorJSON(w, "Failed to create organization")
+		apierror.Internal("Failed to create organization").Write(w)
 		return
 	}
 
@@ -235,31 +236,31 @@ type LoginResponse struct {
 // Register handles user account creation.
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		apierror.BadRequest("Method not allowed").Write(w)
 		return
 	}
 
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Email == "" || req.Password == "" {
-		jsonutil.WriteErrorJSON(w, "Email and password are required")
+		apierror.BadRequest("Email and password are required").Write(w)
 		return
 	}
 
 	b := &bcryptutil.BcryptUtilsImpl{}
 	passwordHash, err := b.GenerateHash(req.Password)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to hash password")
+		apierror.Internal("Failed to hash password").Write(w)
 		return
 	}
 
 	user, err := h.service.CreateUser(r.Context(), req.Email, passwordHash)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to create user (email might be taken)")
+		apierror.Conflict("Failed to create user (email might be taken)").Write(w)
 		return
 	}
 
@@ -322,41 +323,41 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 // Login handles user authentication and JWT issuance.
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		apierror.BadRequest("Method not allowed").Write(w)
 		return
 	}
 
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Email == "" || req.Password == "" {
-		jsonutil.WriteErrorJSON(w, "Email and password are required")
+		apierror.BadRequest("Email and password are required").Write(w)
 		return
 	}
 
 	user, err := h.service.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Internal server error")
+		apierror.Internal("Internal server error").Write(w)
 		return
 	}
 	if user == nil {
-		jsonutil.WriteErrorJSON(w, "Invalid email or password")
+		apierror.Unauthorized("Invalid email or password").Write(w)
 		return
 	}
 
 	b := &bcryptutil.BcryptUtilsImpl{}
 	match := b.CompareHash(req.Password, user.Password)
 	if !match {
-		jsonutil.WriteErrorJSON(w, "Invalid email or password")
+		apierror.Unauthorized("Invalid email or password").Write(w)
 		return
 	}
 
 	token, err := jwtutil.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to generate token")
+		apierror.Internal("Failed to generate token").Write(w)
 		return
 	}
 
@@ -364,7 +365,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := h.service.CreateRefreshToken(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("Login: Failed to create refresh token: %v", err)
-		jsonutil.WriteErrorJSON(w, "Failed to create session")
+		apierror.Internal("Failed to create session").Write(w)
 		return
 	}
 
@@ -403,7 +404,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refreshtoken")
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "No refresh token provided")
+		apierror.Unauthorized("No refresh token provided").Write(w)
 		return
 	}
 
@@ -429,20 +430,20 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 			Expires:  time.Unix(0, 0),
 			SameSite: http.SameSiteLaxMode,
 		})
-		jsonutil.WriteErrorJSON(w, "Invalid or expired refresh token")
+		apierror.Unauthorized("Invalid or expired refresh token").Write(w)
 		return
 	}
 
 	// Generate new access token
 	user, err := h.service.GetUserByID(r.Context(), refreshToken.UserID)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "User not found")
+		apierror.NotFound("User not found").Write(w)
 		return
 	}
 
 	newToken, err := jwtutil.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to generate token")
+		apierror.Internal("Failed to generate token").Write(w)
 		return
 	}
 
@@ -507,7 +508,7 @@ type OAuthTokenResponse struct {
 // OAuthTokenHandler handles OAuth2 token requests.
 func (h *AuthHandler) OAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		apierror.BadRequest("Method not allowed").Write(w)
 		return
 	}
 
@@ -780,29 +781,29 @@ type RegisterClientResponse struct {
 func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := extractUserIDFromToken(r)
 	if err != nil || userID == "" {
-		jsonutil.WriteErrorJSON(w, "Unauthorized")
+		apierror.Unauthorized("Unauthorized").Write(w)
 		return
 	}
 
 	var req RegisterClientRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Name == "" {
-		jsonutil.WriteErrorJSON(w, "Client name required")
+		apierror.BadRequest("Client name required").Write(w)
 		return
 	}
 
 	if len(req.RedirectURIs) == 0 {
-		jsonutil.WriteErrorJSON(w, "At least one redirect URI required")
+		apierror.BadRequest("At least one redirect URI required").Write(w)
 		return
 	}
 
 	clientID, err := h.service.GenerateRandomString(16)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to generate client ID")
+		apierror.Internal("Failed to generate client ID").Write(w)
 		return
 	}
 
@@ -810,7 +811,7 @@ func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Reque
 	if !req.IsPublic {
 		clientSecret, err = h.service.GenerateRandomString(32)
 		if err != nil {
-			jsonutil.WriteErrorJSON(w, "Failed to generate client secret")
+			apierror.Internal("Failed to generate client secret").Write(w)
 			return
 		}
 		clientSecretHash = h.service.HashString(clientSecret)
@@ -826,7 +827,7 @@ func (h *AuthHandler) RegisterClientHandler(w http.ResponseWriter, r *http.Reque
 
 	if err := h.service.CreateOAuthClient(r.Context(), client); err != nil {
 		log.Printf("RegisterClientHandler: Failed to create client: %v", err)
-		jsonutil.WriteErrorJSON(w, "Failed to create client")
+		apierror.Internal("Failed to create client").Write(w)
 		return
 	}
 
@@ -889,14 +890,14 @@ type SSOCallbackRequest struct {
 func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	var req SSOCallbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	user, err := h.service.GetUserByExternalID(r.Context(), req.Provider, req.ProviderUserID)
 	if err != nil {
 		log.Printf("SSOCallback: DB error: %v", err)
-		jsonutil.WriteErrorJSON(w, "Internal server error")
+		apierror.Internal("Internal server error").Write(w)
 		return
 	}
 
@@ -904,7 +905,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		user, err = h.service.CreateUser(r.Context(), req.Email, "SSO_MANAGED")
 		if err != nil {
 			log.Printf("SSOCallback: Failed to create user: %v", err)
-			jsonutil.WriteErrorJSON(w, "Failed to provision user")
+			apierror.Internal("Failed to provision user").Write(w)
 			return
 		}
 
@@ -915,7 +916,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 
 	token, err := jwtutil.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		jsonutil.WriteErrorJSON(w, "Failed to generate token")
+		apierror.Internal("Failed to generate token").Write(w)
 		return
 	}
 
@@ -937,12 +938,12 @@ func (h *AuthHandler) TriggerEvent(w http.ResponseWriter, r *http.Request) {
 		Data   map[string]interface{} `json:"data"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Type == "" || req.ZoneID == "" {
-		jsonutil.WriteErrorJSON(w, "Type and ZoneID are required")
+		apierror.BadRequest("Type and ZoneID are required").Write(w)
 		return
 	}
 
@@ -965,18 +966,18 @@ type ForgotPasswordRequest struct {
 // ForgotPassword handles password reset requests.
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		apierror.BadRequest("Method not allowed").Write(w)
 		return
 	}
 
 	var req ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Email == "" {
-		jsonutil.WriteErrorJSON(w, "Email is required")
+		apierror.BadRequest("Email is required").Write(w)
 		return
 	}
 
@@ -1003,7 +1004,7 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	token, err := h.service.CreatePasswordResetToken(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("ForgotPassword: Error creating reset token: %v", err)
-		jsonutil.WriteErrorJSON(w, "Failed to process request")
+		apierror.Internal("Failed to process request").Write(w)
 		return
 	}
 
@@ -1030,23 +1031,23 @@ type ResetPasswordRequest struct {
 // ResetPassword handles password reset with token validation.
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		apierror.BadRequest("Method not allowed").Write(w)
 		return
 	}
 
 	var req ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Token == "" || req.NewPassword == "" {
-		jsonutil.WriteErrorJSON(w, "Token and new password are required")
+		apierror.BadRequest("Token and new password are required").Write(w)
 		return
 	}
 
 	if len(req.NewPassword) < 8 {
-		jsonutil.WriteErrorJSON(w, "Password must be at least 8 characters")
+		apierror.BadRequest("Password must be at least 8 characters").Write(w)
 		return
 	}
 
@@ -1055,14 +1056,14 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	hashedPassword, err := b.GenerateHash(req.NewPassword)
 	if err != nil {
 		log.Printf("ResetPassword: Error hashing password: %v", err)
-		jsonutil.WriteErrorJSON(w, "Failed to process request")
+		apierror.Internal("Failed to process request").Write(w)
 		return
 	}
 
 	// Reset the password
 	if err := h.service.ResetPassword(r.Context(), req.Token, hashedPassword); err != nil {
 		log.Printf("ResetPassword: Error resetting password: %v", err)
-		jsonutil.WriteErrorJSON(w, "Invalid or expired reset token")
+		apierror.BadRequest("Invalid or expired reset token").Write(w)
 		return
 	}
 
@@ -1081,24 +1082,24 @@ type VerifyEmailRequest struct {
 // VerifyEmail handles email verification with token.
 func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		apierror.BadRequest("Method not allowed").Write(w)
 		return
 	}
 
 	var req VerifyEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Token == "" {
-		jsonutil.WriteErrorJSON(w, "Verification token is required")
+		apierror.BadRequest("Verification token is required").Write(w)
 		return
 	}
 
 	if err := h.service.VerifyEmail(r.Context(), req.Token); err != nil {
 		log.Printf("VerifyEmail: Error verifying email: %v", err)
-		jsonutil.WriteErrorJSON(w, "Invalid or expired verification token")
+		apierror.BadRequest("Invalid or expired verification token").Write(w)
 		return
 	}
 
@@ -1115,18 +1116,18 @@ type ResendVerificationRequest struct {
 // ResendVerification handles resending email verification.
 func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonutil.WriteErrorJSON(w, "Method not allowed")
+		apierror.BadRequest("Method not allowed").Write(w)
 		return
 	}
 
 	var req ResendVerificationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonutil.WriteErrorJSON(w, "Invalid request body")
+		apierror.BadRequest("Invalid request body").Write(w)
 		return
 	}
 
 	if req.Email == "" {
-		jsonutil.WriteErrorJSON(w, "Email is required")
+		apierror.BadRequest("Email is required").Write(w)
 		return
 	}
 
@@ -1150,7 +1151,7 @@ func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request)
 	token, err := h.service.ResendEmailVerification(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("ResendVerification: Error resending verification: %v", err)
-		jsonutil.WriteErrorJSON(w, "Failed to process request")
+		apierror.Internal("Failed to process request").Write(w)
 		return
 	}
 
@@ -1176,7 +1177,7 @@ type DebugGetTokensRequest struct {
 // DebugGetTokens returns the latest token for an email (Debug only)
 func (h *AuthHandler) DebugGetTokens(w http.ResponseWriter, r *http.Request) {
 	if h.rdb == nil {
-		jsonutil.WriteErrorJSON(w, "Debug store not available")
+		apierror.ServiceUnavailable("Debug store not available").Write(w)
 		return
 	}
 
@@ -1185,17 +1186,17 @@ func (h *AuthHandler) DebugGetTokens(w http.ResponseWriter, r *http.Request) {
 	tokenType := r.URL.Query().Get("type")
 
 	if email == "" || tokenType == "" {
-		jsonutil.WriteErrorJSON(w, "email and type required")
+		apierror.BadRequest("email and type required").Write(w)
 		return
 	}
 
 	key := "debug:" + tokenType + ":" + email
 	token, err := h.rdb.Get(r.Context(), key).Result()
 	if err == redis.Nil {
-		jsonutil.WriteErrorJSON(w, "Token not found")
+		apierror.NotFound("Token not found").Write(w)
 		return
 	} else if err != nil {
-		jsonutil.WriteErrorJSON(w, "Error fetching token")
+		apierror.Internal("Error fetching token").Write(w)
 		return
 	}
 

@@ -46,7 +46,7 @@ func TestLedgerHandler_CreateAccount(t *testing.T) {
 					return errors.New("db error")
 				}
 			},
-			expectedStatus: http.StatusBadRequest, // WriteErrorJSON defaults to 400
+			expectedStatus: http.StatusInternalServerError, // DB errors are internal errors, not bad requests
 			expectedBody:   "Failed to create account",
 		},
 	}
