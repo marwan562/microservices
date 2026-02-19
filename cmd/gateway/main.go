@@ -88,9 +88,9 @@ func main() {
 
 	// Middlewares
 	limitHandler := BodyLimitMiddleware(1 * 1024 * 1024)(gateway) // 1MB limit
-	corsHandler := CORSMiddleware(cfg.CORSOrigins, cfg.AllowedOrigins)(limitHandler)
-	authHandler := gateway.AuthMiddleware(corsHandler)
-	otelHandler := otelhttp.NewHandler(authHandler, "gateway-request")
+	authHandler := gateway.AuthMiddleware(limitHandler)
+	corsHandler := CORSMiddleware(cfg.CORSOrigins, cfg.AllowedOrigins)(authHandler)
+	otelHandler := otelhttp.NewHandler(corsHandler, "gateway-request")
 	promHandler := monitoring.PrometheusMiddleware(otelHandler)
 
 	server := &http.Server{
