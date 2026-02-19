@@ -32,6 +32,9 @@ openapi-generator-cli generate -i "$OPENAPI_FILE" -g go -o ../fintech-sdk-go/gen
 # Fix GIT_USER_ID/GIT_REPO_ID placeholders in generated tests
 sed -i '' 's/github.com\/GIT_USER_ID\/GIT_REPO_ID/github.com\/sapliy\/fintech-sdk-go\/generated/g' ../fintech-sdk-go/generated/test/*.go
 
+# Fix test imports: generated tests import the root package alias by default; correct to /generated sub-package
+sed -i '' 's|openapiclient "github.com/sapliy/fintech-sdk-go"|openapiclient "github.com/sapliy/fintech-sdk-go/generated"|g' ../fintech-sdk-go/generated/test/*.go
+
 # --- Python ---
 echo "Generating Python SDK..."
 rm -rf ../fintech-sdk-python/sapliyio_fintech/generated
