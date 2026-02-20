@@ -388,9 +388,10 @@ func (r *SQLRepository) GetAPIKeyByHash(ctx context.Context, hash string) (*doma
 	var zoneID sql.NullString
 	var mode sql.NullString
 	var typeStr sql.NullString
+	var revokedAt sql.NullTime
 	err := r.db.QueryRowContext(ctx,
 		"SELECT id, user_id, org_id, zone_id, mode, key_prefix, environment, scopes, type, revoked_at FROM api_keys WHERE key_hash = $1",
-		hash).Scan(&key.ID, &key.UserID, &orgID, &zoneID, &mode, &key.KeyPrefix, &key.Environment, &scopes, &typeStr, &key.RevokedAt)
+		hash).Scan(&key.ID, &key.UserID, &orgID, &zoneID, &mode, &key.KeyPrefix, &key.Environment, &scopes, &typeStr, &revokedAt)
 	key.OrgID = orgID.String
 	key.ZoneID = zoneID.String
 	key.Mode = mode.String
@@ -401,6 +402,9 @@ func (r *SQLRepository) GetAPIKeyByHash(ctx context.Context, hash string) (*doma
 	key.Scopes = scopes.String
 	if key.Scopes == "" {
 		key.Scopes = "*"
+	}
+	if revokedAt.Valid {
+		key.RevokedAt = &revokedAt.Time
 	}
 
 	if err != nil {

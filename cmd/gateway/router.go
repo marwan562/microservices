@@ -56,6 +56,19 @@ func (h *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(p, "/flows") || strings.HasPrefix(p, "/executions"):
 		h.proxyRequest(h.flowServiceURL, w, r)
 
+	case strings.HasPrefix(p, "/zones"):
+		// Some /zones endpoints belong to flow-service and events-service
+		if strings.Contains(p, "/flows") {
+			h.proxyRequest(h.flowServiceURL, w, r)
+			return
+		}
+		if strings.Contains(p, "/events") {
+			h.proxyRequest(h.eventsServiceURL, w, r)
+			return
+		}
+		// Default /zones goes to auth
+		h.proxyRequest(h.authServiceURL, w, r)
+
 	case p == "/ws": // Legacy or alternative WS path
 		if websocket.IsWebSocketUpgrade(r) {
 			h.handleWebSocket(w, r)
